@@ -37,6 +37,15 @@ python -m http.server 8000
 ```
 Open: http://localhost:8000
 
+### React Frontend (no build tools)
+This repo also includes a lightweight React UI served as static files (React is loaded via CDN).
+
+```bash
+cd frontend-react
+python -m http.server 5173
+```
+Open: http://localhost:5173
+
 ## Project Structure
 
 ```
@@ -47,6 +56,9 @@ V-LAB/
 ├── frontend/
 │   ├── index.html          # Interactive UI with Tailwind CSS
 │   └── app.js              # JavaScript with Axios API calls
+├── frontend-react/
+│   ├── index.html          # React UI (served as static files)
+│   └── src/main.js         # React app entry (CDN imports)
 └── README.md
 ```
 

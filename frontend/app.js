@@ -1,6 +1,7 @@
 // Configuration
+// Use the current hostname so this works in VM/LAN setups (not just localhost).
 // Backend runs on port 5000 (see backend/app.py and README).
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = `http://${window.location.hostname}:5000/api`;
 
 // State
 let allReactions = [];
