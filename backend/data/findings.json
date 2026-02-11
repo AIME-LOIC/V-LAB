@@ -1,5 +1,15 @@
 [
   {
+    "id": "finding_1770800526902_b50934384a0c7",
+    "title": "Chemistry Lab: Methane (CH₄)",
+    "content": "Mixture: Methane (CH₄), Oxygen (O₂)",
+    "experiment": "Methane (CH₄), Oxygen (O₂)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T11:02:06.917045",
+    "observations": "blue to yellow flame observed. Methane burns in oxygen to produce carbon dioxide and water",
+    "conclusion": "Combustion of Methane: CH₄ + 2O₂ → CO₂ + 2H₂O"
+  },
+  {
     "id": "finding_1770799414599_e56711159cc0c8",
     "title": "Chemistry Lab: Water (H₂O)",
     "content": "Mixture: Water (H₂O), Oil",

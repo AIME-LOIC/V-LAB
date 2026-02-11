@@ -215,16 +215,19 @@ function App() {
     setLabLog((prev) => [{ id: uid('log'), at: new Date().toISOString(), type: 'remove', message: `Removed ${name}.` }, ...prev]);
   }
   function toggleTool(name) {
-    setSelectedTools((prev) => (prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]));
-    setLabLog((prev) => [
-      {
-        id: uid('log'),
-        at: new Date().toISOString(),
-        type: 'tool',
-        message: `${name} ${selectedTools.includes(name) ? 'disabled' : 'enabled'}.`,
-      },
-      ...prev,
-    ]);
+    setSelectedTools((prev) => {
+      const enabled = !prev.includes(name);
+      setLabLog((logPrev) => [
+        {
+          id: uid('log'),
+          at: new Date().toISOString(),
+          type: 'tool',
+          message: `${name} ${enabled ? 'enabled' : 'disabled'}.`,
+        },
+        ...logPrev,
+      ]);
+      return enabled ? [...prev, name] : prev.filter((t) => t !== name);
+    });
   }
   function clearLab() {
     setSelectedChemicals([]);
@@ -633,7 +636,6 @@ function App() {
           <div class="lg:col-span-2 space-y-4 sm:space-y-6">
             <div class="lab-surface rounded-2xl p-4 sm:p-6">
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Shelf -->
                 <div class="md:col-span-1 glass rounded-xl p-3">
                   <div class="flex items-center justify-between gap-3 mb-3">
                     <div class="text-xs text-slate-300 font-bold flex items-center gap-2">
@@ -673,12 +675,12 @@ function App() {
                           )}
                           title="Drag into beaker"
                         >
-                          <div class="min-w-0">
+                          <div class="min-w-0 flex-1">
                             <div class="text-sm text-slate-100 truncate">${c.name}</div>
                             <div class="text-[11px] text-slate-400 truncate">${c.category}</div>
                           </div>
-                          <div class="flex items-center gap-2">
-                            <span class="text-xs font-mono text-slate-300">${c.symbol}</span>
+                          <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-mono text-slate-300 truncate max-w-[80px]">${c.symbol}</span>
                             <span class="h-3 w-3 rounded-full border border-white/10" style=${{ background: c.color || '#64748b' }}></span>
                           </div>
                         </div>
@@ -690,7 +692,6 @@ function App() {
                   </div>
                 </div>
 
-                <!-- Bench -->
                 <div class="md:col-span-2 space-y-4">
                   <div class="glass rounded-xl p-4">
                     <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
@@ -703,7 +704,6 @@ function App() {
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <!-- Beaker zone -->
                       <div class="relative bg-slate-950/35 border border-slate-800 rounded-xl p-4 beaker-glow">
                         <div class="text-xs text-slate-400 mb-2 flex items-center justify-between">
                           <span><i class="fa-solid fa-flask-vial mr-2"></i>Beaker</span>
@@ -790,7 +790,7 @@ function App() {
                             </svg>
                           </div>
 
-                          <div class="mt-3 flex flex-wrap gap-2 min-h-10">
+                          <div class="mt-3 flex flex-wrap gap-2 min-h-10 min-w-0">
                             ${selectedChemicals.length === 0
                               ? html`<div class="text-sm text-slate-500">Drop reagents here.</div>`
                               : selectedChemicals.map(
@@ -823,7 +823,6 @@ function App() {
                         </div>
                       </div>
 
-                      <!-- Instruments -->
                       <div class="space-y-3">
                         <div class="bg-slate-950/35 border border-slate-800 rounded-xl p-4">
                           <div class="text-xs text-slate-400 mb-2 flex items-center justify-between">
@@ -929,10 +928,11 @@ function App() {
                                   )}
                                   onClick=${() => toggleTool(t.name)}
                                   title=${t.note}
+                                  type="button"
                                 >
-                                  <div class="flex items-center gap-2">
+                                  <div class="flex items-center gap-2 min-w-0">
                                     <i class=${classNames(t.icon, active ? 'text-yellow-200' : 'text-slate-300')}></i>
-                                    <div class="font-bold text-slate-100">${t.name}</div>
+                                    <div class="font-bold text-slate-100 truncate">${t.name}</div>
                                   </div>
                                   <div class="text-[11px] text-slate-400 truncate mt-1 group-hover:text-slate-300">${t.note}</div>
                                 </button>
@@ -966,7 +966,7 @@ function App() {
                             <div class="mt-3 bg-slate-900/60 border border-slate-800 rounded-xl p-3">
                               <div class="text-xs text-slate-400 mb-1">Matched reaction</div>
                               <div class="font-bold text-cyan-200">${labResult.reaction.name}</div>
-                              <div class="text-xs font-mono text-slate-300 mt-1">${labResult.reaction.equation}</div>
+                              <div class="text-xs font-mono text-slate-300 mt-1 break-words">${labResult.reaction.equation}</div>
                               <div class="text-xs text-slate-400 mt-2">
                                 ${labResult.reaction.type} · Energy: ${labResult.reaction.energyRelease ?? '—'}
                               </div>
@@ -1012,9 +1012,9 @@ function App() {
                   ? html`<div class="text-slate-500">No events yet. Drag chemicals into the beaker.</div>`
                   : labLog.slice(0, 24).map(
                       (l) => html`
-                        <div class="flex gap-2 py-1 border-b border-slate-800/60 last:border-b-0">
-                          <span class="text-slate-500">${new Date(l.at).toLocaleTimeString()}</span>
-                          <span class="text-slate-200 break-words">${l.message}</span>
+                        <div class="flex gap-2 py-1 border-b border-slate-800/60 last:border-b-0 min-w-0">
+                          <span class="text-slate-500 shrink-0">${new Date(l.at).toLocaleTimeString()}</span>
+                          <span class="text-slate-200 break-words min-w-0 flex-1">${l.message}</span>
                         </div>
                       `
                     )}
@@ -1290,7 +1290,7 @@ function App() {
       ${openReaction
         ? html`
             <div class="space-y-3 text-slate-300 text-sm">
-              <div class="font-mono text-slate-100">${openReaction.equation}</div>
+              <div class="font-mono text-slate-100 break-words">${openReaction.equation}</div>
               <div class="flex gap-2 flex-wrap">
                 <span class="text-xs px-2 py-1 bg-slate-900/60 border border-slate-800 rounded">${openReaction.category}</span>
                 <span class="text-xs px-2 py-1 bg-slate-900/60 border border-slate-800 rounded">${openReaction.type}</span>
