@@ -3,12 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Virtual Science Lab (React)</title>
+    <title>Virtual Science Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      .section { animation: fadeIn 0.18s ease-in; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
   </head>
-  <body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-screen">
+  <body class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white min-h-screen">
     <div id="root"></div>
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
-
