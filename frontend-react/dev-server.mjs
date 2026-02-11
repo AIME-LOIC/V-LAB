@@ -32,6 +32,14 @@ function notFound(res) {
   send(res, 404, 'Not Found', { 'Content-Type': 'text/plain; charset=utf-8' });
 }
 
+async function sendFile(res, filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME.get(ext) || 'application/octet-stream';
+  const body = await readFile(filePath);
+  res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': body.length });
+  res.end(body);
+}
+
 function safeJoin(root, requestPath) {
   const decoded = decodeURIComponent(requestPath.split('?')[0]);
   const p = decoded === '/' ? '/index.html' : decoded;
@@ -81,13 +89,16 @@ const server = http.createServer(async (req, res) => {
     if (!filePath) return notFound(res);
 
     const info = await stat(filePath).catch(() => null);
-    if (!info || !info.isFile()) return notFound(res);
+    if (!info || !info.isFile()) {
+      const ext = path.extname(filePath);
+      if (!ext) {
+        const indexPath = path.join(__dirname, 'index.html');
+        return sendFile(res, indexPath);
+      }
+      return notFound(res);
+    }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME.get(ext) || 'application/octet-stream';
-    const body = await readFile(filePath);
-    res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': body.length });
-    res.end(body);
+    return sendFile(res, filePath);
   } catch (e) {
     send(res, 500, `Server Error: ${String(e.message || e)}`, { 'Content-Type': 'text/plain; charset=utf-8' });
   }
@@ -99,4 +110,3 @@ server.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console
   console.log(`Proxying /api/* to: ${BACKEND_ORIGIN}`);
 });
-

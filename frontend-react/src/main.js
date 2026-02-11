@@ -5,6 +5,171 @@ import htm from 'https://esm.sh/htm@3.1.1';
 const html = htm.bind(React.createElement);
 
 const API_BASE = '/api';
+const TAB_ROUTES = {
+  vlab: '/',
+  home: '/home',
+  reactions: '/reactions',
+  tools: '/tools',
+  lab: '/lab',
+  notebook: '/notebook',
+  about: '/about',
+};
+const TAB_KEYS = new Set(Object.keys(TAB_ROUTES));
+const TAB_TITLES = {
+  vlab: 'Virtual Science Lab',
+  home: 'Dashboard',
+  reactions: 'Reactions',
+  tools: 'Tools',
+  periodic: 'Periodic Table',
+  lab: 'Lab',
+  notebook: 'Notebook',
+  about: 'About',
+};
+
+const ELEMENTS = [
+  { number: 1, symbol: 'H', name: 'Hydrogen', category: 'Nonmetal', group: 1, period: 1 },
+  { number: 2, symbol: 'He', name: 'Helium', category: 'Noble gas', group: 18, period: 1 },
+  { number: 3, symbol: 'Li', name: 'Lithium', category: 'Alkali metal', group: 1, period: 2 },
+  { number: 4, symbol: 'Be', name: 'Beryllium', category: 'Alkaline earth metal', group: 2, period: 2 },
+  { number: 5, symbol: 'B', name: 'Boron', category: 'Metalloid', group: 13, period: 2 },
+  { number: 6, symbol: 'C', name: 'Carbon', category: 'Nonmetal', group: 14, period: 2 },
+  { number: 7, symbol: 'N', name: 'Nitrogen', category: 'Nonmetal', group: 15, period: 2 },
+  { number: 8, symbol: 'O', name: 'Oxygen', category: 'Nonmetal', group: 16, period: 2 },
+  { number: 9, symbol: 'F', name: 'Fluorine', category: 'Halogen', group: 17, period: 2 },
+  { number: 10, symbol: 'Ne', name: 'Neon', category: 'Noble gas', group: 18, period: 2 },
+  { number: 11, symbol: 'Na', name: 'Sodium', category: 'Alkali metal', group: 1, period: 3 },
+  { number: 12, symbol: 'Mg', name: 'Magnesium', category: 'Alkaline earth metal', group: 2, period: 3 },
+  { number: 13, symbol: 'Al', name: 'Aluminum', category: 'Post-transition metal', group: 13, period: 3 },
+  { number: 14, symbol: 'Si', name: 'Silicon', category: 'Metalloid', group: 14, period: 3 },
+  { number: 15, symbol: 'P', name: 'Phosphorus', category: 'Nonmetal', group: 15, period: 3 },
+  { number: 16, symbol: 'S', name: 'Sulfur', category: 'Nonmetal', group: 16, period: 3 },
+  { number: 17, symbol: 'Cl', name: 'Chlorine', category: 'Halogen', group: 17, period: 3 },
+  { number: 18, symbol: 'Ar', name: 'Argon', category: 'Noble gas', group: 18, period: 3 },
+  { number: 19, symbol: 'K', name: 'Potassium', category: 'Alkali metal', group: 1, period: 4 },
+  { number: 20, symbol: 'Ca', name: 'Calcium', category: 'Alkaline earth metal', group: 2, period: 4 },
+  { number: 21, symbol: 'Sc', name: 'Scandium', category: 'Transition metal', group: 3, period: 4 },
+  { number: 22, symbol: 'Ti', name: 'Titanium', category: 'Transition metal', group: 4, period: 4 },
+  { number: 23, symbol: 'V', name: 'Vanadium', category: 'Transition metal', group: 5, period: 4 },
+  { number: 24, symbol: 'Cr', name: 'Chromium', category: 'Transition metal', group: 6, period: 4 },
+  { number: 25, symbol: 'Mn', name: 'Manganese', category: 'Transition metal', group: 7, period: 4 },
+  { number: 26, symbol: 'Fe', name: 'Iron', category: 'Transition metal', group: 8, period: 4 },
+  { number: 27, symbol: 'Co', name: 'Cobalt', category: 'Transition metal', group: 9, period: 4 },
+  { number: 28, symbol: 'Ni', name: 'Nickel', category: 'Transition metal', group: 10, period: 4 },
+  { number: 29, symbol: 'Cu', name: 'Copper', category: 'Transition metal', group: 11, period: 4 },
+  { number: 30, symbol: 'Zn', name: 'Zinc', category: 'Transition metal', group: 12, period: 4 },
+  { number: 31, symbol: 'Ga', name: 'Gallium', category: 'Post-transition metal', group: 13, period: 4 },
+  { number: 32, symbol: 'Ge', name: 'Germanium', category: 'Metalloid', group: 14, period: 4 },
+  { number: 33, symbol: 'As', name: 'Arsenic', category: 'Metalloid', group: 15, period: 4 },
+  { number: 34, symbol: 'Se', name: 'Selenium', category: 'Nonmetal', group: 16, period: 4 },
+  { number: 35, symbol: 'Br', name: 'Bromine', category: 'Halogen', group: 17, period: 4 },
+  { number: 36, symbol: 'Kr', name: 'Krypton', category: 'Noble gas', group: 18, period: 4 },
+  { number: 37, symbol: 'Rb', name: 'Rubidium', category: 'Alkali metal', group: 1, period: 5 },
+  { number: 38, symbol: 'Sr', name: 'Strontium', category: 'Alkaline earth metal', group: 2, period: 5 },
+  { number: 39, symbol: 'Y', name: 'Yttrium', category: 'Transition metal', group: 3, period: 5 },
+  { number: 40, symbol: 'Zr', name: 'Zirconium', category: 'Transition metal', group: 4, period: 5 },
+  { number: 41, symbol: 'Nb', name: 'Niobium', category: 'Transition metal', group: 5, period: 5 },
+  { number: 42, symbol: 'Mo', name: 'Molybdenum', category: 'Transition metal', group: 6, period: 5 },
+  { number: 43, symbol: 'Tc', name: 'Technetium', category: 'Transition metal', group: 7, period: 5 },
+  { number: 44, symbol: 'Ru', name: 'Ruthenium', category: 'Transition metal', group: 8, period: 5 },
+  { number: 45, symbol: 'Rh', name: 'Rhodium', category: 'Transition metal', group: 9, period: 5 },
+  { number: 46, symbol: 'Pd', name: 'Palladium', category: 'Transition metal', group: 10, period: 5 },
+  { number: 47, symbol: 'Ag', name: 'Silver', category: 'Transition metal', group: 11, period: 5 },
+  { number: 48, symbol: 'Cd', name: 'Cadmium', category: 'Transition metal', group: 12, period: 5 },
+  { number: 49, symbol: 'In', name: 'Indium', category: 'Post-transition metal', group: 13, period: 5 },
+  { number: 50, symbol: 'Sn', name: 'Tin', category: 'Post-transition metal', group: 14, period: 5 },
+  { number: 51, symbol: 'Sb', name: 'Antimony', category: 'Metalloid', group: 15, period: 5 },
+  { number: 52, symbol: 'Te', name: 'Tellurium', category: 'Metalloid', group: 16, period: 5 },
+  { number: 53, symbol: 'I', name: 'Iodine', category: 'Halogen', group: 17, period: 5 },
+  { number: 54, symbol: 'Xe', name: 'Xenon', category: 'Noble gas', group: 18, period: 5 },
+  { number: 55, symbol: 'Cs', name: 'Cesium', category: 'Alkali metal', group: 1, period: 6 },
+  { number: 56, symbol: 'Ba', name: 'Barium', category: 'Alkaline earth metal', group: 2, period: 6 },
+  { number: 57, symbol: 'La', name: 'Lanthanum', category: 'Lanthanide', group: 3, period: 6 },
+  { number: 58, symbol: 'Ce', name: 'Cerium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 59, symbol: 'Pr', name: 'Praseodymium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 60, symbol: 'Nd', name: 'Neodymium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 61, symbol: 'Pm', name: 'Promethium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 62, symbol: 'Sm', name: 'Samarium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 63, symbol: 'Eu', name: 'Europium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 64, symbol: 'Gd', name: 'Gadolinium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 65, symbol: 'Tb', name: 'Terbium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 66, symbol: 'Dy', name: 'Dysprosium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 67, symbol: 'Ho', name: 'Holmium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 68, symbol: 'Er', name: 'Erbium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 69, symbol: 'Tm', name: 'Thulium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 70, symbol: 'Yb', name: 'Ytterbium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 71, symbol: 'Lu', name: 'Lutetium', category: 'Lanthanide', period: 6, series: 'lanthanide' },
+  { number: 72, symbol: 'Hf', name: 'Hafnium', category: 'Transition metal', group: 4, period: 6 },
+  { number: 73, symbol: 'Ta', name: 'Tantalum', category: 'Transition metal', group: 5, period: 6 },
+  { number: 74, symbol: 'W', name: 'Tungsten', category: 'Transition metal', group: 6, period: 6 },
+  { number: 75, symbol: 'Re', name: 'Rhenium', category: 'Transition metal', group: 7, period: 6 },
+  { number: 76, symbol: 'Os', name: 'Osmium', category: 'Transition metal', group: 8, period: 6 },
+  { number: 77, symbol: 'Ir', name: 'Iridium', category: 'Transition metal', group: 9, period: 6 },
+  { number: 78, symbol: 'Pt', name: 'Platinum', category: 'Transition metal', group: 10, period: 6 },
+  { number: 79, symbol: 'Au', name: 'Gold', category: 'Transition metal', group: 11, period: 6 },
+  { number: 80, symbol: 'Hg', name: 'Mercury', category: 'Transition metal', group: 12, period: 6 },
+  { number: 81, symbol: 'Tl', name: 'Thallium', category: 'Post-transition metal', group: 13, period: 6 },
+  { number: 82, symbol: 'Pb', name: 'Lead', category: 'Post-transition metal', group: 14, period: 6 },
+  { number: 83, symbol: 'Bi', name: 'Bismuth', category: 'Post-transition metal', group: 15, period: 6 },
+  { number: 84, symbol: 'Po', name: 'Polonium', category: 'Metalloid', group: 16, period: 6 },
+  { number: 85, symbol: 'At', name: 'Astatine', category: 'Halogen', group: 17, period: 6 },
+  { number: 86, symbol: 'Rn', name: 'Radon', category: 'Noble gas', group: 18, period: 6 },
+  { number: 87, symbol: 'Fr', name: 'Francium', category: 'Alkali metal', group: 1, period: 7 },
+  { number: 88, symbol: 'Ra', name: 'Radium', category: 'Alkaline earth metal', group: 2, period: 7 },
+  { number: 89, symbol: 'Ac', name: 'Actinium', category: 'Actinide', group: 3, period: 7 },
+  { number: 90, symbol: 'Th', name: 'Thorium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 91, symbol: 'Pa', name: 'Protactinium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 92, symbol: 'U', name: 'Uranium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 93, symbol: 'Np', name: 'Neptunium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 94, symbol: 'Pu', name: 'Plutonium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 95, symbol: 'Am', name: 'Americium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 96, symbol: 'Cm', name: 'Curium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 97, symbol: 'Bk', name: 'Berkelium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 98, symbol: 'Cf', name: 'Californium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 99, symbol: 'Es', name: 'Einsteinium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 100, symbol: 'Fm', name: 'Fermium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 101, symbol: 'Md', name: 'Mendelevium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 102, symbol: 'No', name: 'Nobelium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 103, symbol: 'Lr', name: 'Lawrencium', category: 'Actinide', period: 7, series: 'actinide' },
+  { number: 104, symbol: 'Rf', name: 'Rutherfordium', category: 'Transition metal', group: 4, period: 7 },
+  { number: 105, symbol: 'Db', name: 'Dubnium', category: 'Transition metal', group: 5, period: 7 },
+  { number: 106, symbol: 'Sg', name: 'Seaborgium', category: 'Transition metal', group: 6, period: 7 },
+  { number: 107, symbol: 'Bh', name: 'Bohrium', category: 'Transition metal', group: 7, period: 7 },
+  { number: 108, symbol: 'Hs', name: 'Hassium', category: 'Transition metal', group: 8, period: 7 },
+  { number: 109, symbol: 'Mt', name: 'Meitnerium', category: 'Transition metal', group: 9, period: 7 },
+  { number: 110, symbol: 'Ds', name: 'Darmstadtium', category: 'Transition metal', group: 10, period: 7 },
+  { number: 111, symbol: 'Rg', name: 'Roentgenium', category: 'Transition metal', group: 11, period: 7 },
+  { number: 112, symbol: 'Cn', name: 'Copernicium', category: 'Transition metal', group: 12, period: 7 },
+  { number: 113, symbol: 'Nh', name: 'Nihonium', category: 'Post-transition metal', group: 13, period: 7 },
+  { number: 114, symbol: 'Fl', name: 'Flerovium', category: 'Post-transition metal', group: 14, period: 7 },
+  { number: 115, symbol: 'Mc', name: 'Moscovium', category: 'Post-transition metal', group: 15, period: 7 },
+  { number: 116, symbol: 'Lv', name: 'Livermorium', category: 'Post-transition metal', group: 16, period: 7 },
+  { number: 117, symbol: 'Ts', name: 'Tennessine', category: 'Halogen', group: 17, period: 7 },
+  { number: 118, symbol: 'Og', name: 'Oganesson', category: 'Noble gas', group: 18, period: 7 },
+];
+
+function normalizePathname(pathname) {
+  if (!pathname) return '/';
+  const trimmed = pathname.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
+function normalizeTab(value) {
+  if (TAB_KEYS.has(value)) return value;
+  return 'vlab';
+}
+
+function getTabFromLocation() {
+  if (typeof window === 'undefined') return 'vlab';
+  const path = normalizePathname(window.location.pathname);
+  const matched = Object.entries(TAB_ROUTES).find(([, route]) => route === path);
+  if (matched) return matched[0];
+  const params = new URLSearchParams(window.location.search);
+  const paramTab = params.get('tab');
+  if (paramTab && TAB_KEYS.has(paramTab)) return paramTab;
+  const hashTab = (window.location.hash || '').replace(/^#\/?/, '');
+  if (TAB_KEYS.has(hashTab)) return hashTab;
+  return 'vlab';
+}
 
 function classNames(...values) {
   return values.filter(Boolean).join(' ');
@@ -223,7 +388,19 @@ async function apiPost(path, body) {
 
 function App() {
   const toast = useToast();
-  const [tab, setTab] = React.useState('vlab');
+  const [tab, setTab] = React.useState(() => getTabFromLocation());
+  const didInitRouteRef = React.useRef(false);
+
+  const goTab = React.useCallback((nextTab) => {
+    const normalized = normalizeTab(nextTab);
+    setTab(normalized);
+    if (typeof window === 'undefined') return;
+    const current = normalizePathname(window.location.pathname);
+    const target = TAB_ROUTES[normalized] || '/';
+    if (current !== target) {
+      window.history.pushState({ tab: normalized }, '', target);
+    }
+  }, []);
 
   const [stats, setStats] = React.useState(null);
   const [reactions, setReactions] = React.useState([]);
@@ -268,7 +445,6 @@ function App() {
       labTimersRef.current.timeouts = [];
     }
   }
-  const labTimerRef = React.useRef(null);
 
   const [findings, setFindings] = useLocalStorageState('vlab_findings_v2', []);
   const [activeFindingId, setActiveFindingId] = React.useState(null);
@@ -287,8 +463,34 @@ function App() {
   );
 
   React.useEffect(() => {
-    // base data
-    Promise.all([
+    if (typeof window === 'undefined') return;
+    if (!didInitRouteRef.current) {
+      const target = TAB_ROUTES[tab] || '/';
+      const current = normalizePathname(window.location.pathname);
+      if (current !== target) {
+        window.history.replaceState({ tab }, '', target);
+      }
+      didInitRouteRef.current = true;
+    }
+  }, [tab]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePop = () => {
+      setTab(getTabFromLocation());
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const suffix = TAB_TITLES[tab] || 'V-LAB';
+    document.title = `V-LAB • ${suffix}`;
+  }, [tab]);
+
+  const loadBaseData = React.useCallback(() => {
+    return Promise.all([
       apiGet('/stats'),
       apiGet('/reactions'),
       apiGet('/categories'),
@@ -315,8 +517,11 @@ function App() {
         setApiError(null);
       })
       .catch((e) => setApiError(e));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setFindings]);
+
+  React.useEffect(() => {
+    loadBaseData();
+  }, [loadBaseData]);
 
   React.useEffect(() => {
     if (activeFindingId) return;
@@ -499,6 +704,14 @@ function App() {
             Start the backend at <span class="font-mono">http://127.0.0.1:5000</span> and refresh.
           </div>
           <div class="text-slate-400 mt-1">Details: ${String(apiError.message || apiError)}</div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button class="btn btn-danger" onClick=${loadBaseData} type="button">
+              <i class="fa-solid fa-rotate"></i> Retry
+            </button>
+            <button class="btn" onClick=${() => goTab('about')} type="button">
+              <i class="fa-solid fa-circle-info"></i> Setup Help
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -518,11 +731,10 @@ function App() {
       <nav class="nav-shell sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <div class="text-xl sm:text-2xl font-extrabold tracking-tight">
-              <span class="text-cyan-300">⚗️</span> Virtual Science Lab
-            </div>
-            <div class="hidden sm:block text-xs text-slate-400 border border-slate-700/60 rounded-full px-2 py-1">
-              Student-friendly lab simulator
+            <div class="logo-mark"><i class="fa-solid fa-atom"></i></div>
+            <div>
+              <div class="text-xl sm:text-2xl font-extrabold tracking-tight">V-LAB</div>
+              <div class="hidden sm:block text-xs text-slate-400">Virtual Science Lab</div>
             </div>
           </div>
           <div class="flex gap-2 sm:gap-3 flex-wrap justify-end">
@@ -530,7 +742,7 @@ function App() {
               ([key, label]) => html`
                 <button
                   class=${classNames('nav-link', tab === key ? 'active' : '')}
-                  onClick=${() => setTab(key)}
+                  onClick=${() => goTab(key)}
                   type="button"
                 >
                   ${label}
@@ -590,7 +802,7 @@ function App() {
             </div>
             <button
               class="btn btn-primary w-full mt-4"
-              onClick=${() => setTab('notebook')}
+              onClick=${() => goTab('notebook')}
               type="button"
             >
               <i class="fa-solid fa-book"></i> Open Notebook
@@ -701,14 +913,14 @@ function App() {
               <div class="mt-6 flex gap-3 flex-wrap">
                 <button
                   class="btn btn-solid"
-                  onClick=${() => setTab('lab')}
+                  onClick=${() => goTab('lab')}
                   type="button"
                 >
                   <i class="fa-solid fa-flask-vial"></i> Get Started
                 </button>
                 <button
                   class="btn"
-                  onClick=${() => setTab('notebook')}
+                  onClick=${() => goTab('notebook')}
                   type="button"
                 >
                   <i class="fa-solid fa-book"></i> Open Notebook
@@ -716,7 +928,7 @@ function App() {
               </div>
 
               <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="glass rounded-xl p-4 min-w-0">
+                <div class="panel p-4 min-w-0">
                   <div class="font-bold text-slate-100 flex items-center gap-2">
                     <i class="fa-solid fa-flask-vial text-cyan-200"></i> Real lab steps
                   </div>
@@ -724,7 +936,7 @@ function App() {
                     Drag reagents, use tools, run experiments, and observe.
                   </div>
                 </div>
-                <div class="glass rounded-xl p-4 min-w-0">
+                <div class="panel p-4 min-w-0">
                   <div class="font-bold text-slate-100 flex items-center gap-2">
                     <i class="fa-solid fa-book text-emerald-200"></i> Notes included
                   </div>
@@ -735,7 +947,7 @@ function App() {
               </div>
             </div>
 
-            <div class="glass rounded-2xl p-4 sm:p-6 overflow-hidden">
+            <div class="panel p-4 sm:p-6 overflow-hidden">
               <div class="flex items-center justify-between mb-3 min-w-0">
                 <div class="font-bold text-slate-100 flex items-center gap-2 min-w-0">
                   <i class="fa-solid fa-cube text-purple-200"></i>
@@ -747,6 +959,33 @@ function App() {
               <div class="text-[11px] text-slate-400 mt-3">
                 The lab simulator works even if 3D is slow on older devices.
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 sm:mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+          <div class="panel p-4">
+            <div class="font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-route text-cyan-200"></i> Guided workflow
+            </div>
+            <div class="text-sm text-slate-300 mt-2">
+              Step-by-step lab flow with clear status, so non-technical students feel confident.
+            </div>
+          </div>
+          <div class="panel p-4">
+            <div class="font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-gauge text-purple-200"></i> Instrument-grade controls
+            </div>
+            <div class="text-sm text-slate-300 mt-2">
+              Measure temperature, control heat, and track reaction speed in real time.
+            </div>
+          </div>
+          <div class="panel p-4">
+            <div class="font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved text-emerald-200"></i> Safety-first
+            </div>
+            <div class="text-sm text-slate-300 mt-2">
+              Visual warnings and lab-safe outcomes for classroom use.
             </div>
           </div>
         </div>
@@ -780,6 +1019,22 @@ function App() {
     const hasWater = selectedChemicals.some((c) => String(c.symbol || '').includes('H₂O') || String(c.name || '').toLowerCase().includes('water'));
     const hasOil = selectedChemicals.some((c) => String(c.symbol || '').toLowerCase() === 'oil' || String(c.name || '').toLowerCase().includes('oil'));
     const showLayers = (hasWater && hasOil) || obsText.includes('immiscible') || obsText.includes('layers') || obsText.includes('layer');
+    const controlsTouched = burnerOn || volumeMl !== 250;
+    const steps = [
+      { key: 'reagents', label: 'Reagents', done: selectedChemicals.length > 0 },
+      { key: 'tools', label: 'Tools', done: selectedTools.length > 0 },
+      { key: 'controls', label: 'Heat + Volume', done: controlsTouched },
+      { key: 'run', label: 'Run', done: labStage !== 'idle' },
+      { key: 'observe', label: 'Observe', done: labStage === 'done' && !!labResult },
+    ];
+    let activeStep = 'reagents';
+    if (selectedChemicals.length > 0) activeStep = 'tools';
+    if (selectedChemicals.length > 0 && selectedTools.length > 0) activeStep = 'controls';
+    if (controlsTouched) activeStep = 'run';
+    if (labStage === 'mixing' || labStage === 'reacting') activeStep = 'run';
+    if (labStage === 'done') activeStep = 'observe';
+    const stageTone = labStage === 'done' ? 'ok' : labStage === 'reacting' || labStage === 'mixing' ? 'warn' : '';
+    const apiTone = apiError ? 'err' : 'ok';
 
     function onDragStartChemical(e, chem) {
       e.dataTransfer.setData('chemical', JSON.stringify(chem));
@@ -826,6 +1081,36 @@ function App() {
             >
               <i class="fa-solid fa-play mr-2"></i>${labRunning ? 'Running...' : 'Run'}
             </button>
+          </div>
+        </div>
+
+        <div class="status-strip mb-4 sm:mb-5">
+          <div class="stepper">
+            ${steps.map((step) => {
+              const isActive = activeStep === step.key;
+              return html`
+                <div class=${classNames('step', step.done ? 'done' : '', isActive ? 'active' : '')}>
+                  <span class="dot"></span>${step.label}
+                </div>
+              `;
+            })}
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="status-pill">
+              <span class=${classNames('status-dot', apiTone)}></span> API ${apiError ? 'Offline' : 'Online'}
+            </div>
+            <div class="status-pill">
+              <span class=${classNames('status-dot', stageTone)}></span> Stage ${labStage}
+            </div>
+            <div class="status-pill">
+              <span class="status-dot"></span> Reagents ${selectedChemicals.length}
+            </div>
+            <div class="status-pill">
+              <span class="status-dot"></span> Tools ${selectedTools.length}
+            </div>
+            <div class="status-pill">
+              <span class="status-dot"></span> Vessel ${vessel === 'beaker' ? 'Beaker' : 'Test tube'}
+            </div>
           </div>
         </div>
 
@@ -1082,11 +1367,14 @@ function App() {
                       </div>
 
                       <div class="space-y-3">
-                        <div class="bg-slate-950/35 border border-slate-800 rounded-xl p-4">
-                          <div class="text-xs text-slate-400 mb-2 flex items-center justify-between min-w-0">
-                            <span class="truncate"><i class="fa-solid fa-sliders mr-2"></i>Controls</span>
-                            <span class="font-mono">${labProgress}%</span>
+                        <div class="panel">
+                          <div class="panel-hd">
+                            <div class="title text-xs">
+                              <i class="fa-solid fa-sliders"></i> Controls
+                            </div>
+                            <div class="text-[11px] text-slate-400 font-mono">${labProgress}%</div>
                           </div>
+                          <div class="panel-bd">
 
                           <div class="w-full bg-slate-900/70 border border-slate-800 rounded-full h-2 overflow-hidden">
                             <div
@@ -1096,25 +1384,25 @@ function App() {
                           </div>
 
                           <div class="mt-3 grid grid-cols-2 gap-2">
-                            <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-2">
+                            <div class="metric-card">
                               <div class="text-[11px] text-slate-400"><i class="fa-solid fa-temperature-three-quarters mr-2"></i>Temp (°C)</div>
                               <div class="text-lg font-extrabold">
                                 ${labResult?.measurements?.temperature_c != null ? labResult.measurements.temperature_c : '—'}
                               </div>
                             </div>
-                            <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-2">
+                            <div class="metric-card">
                               <div class="text-[11px] text-slate-400"><i class="fa-solid fa-gauge-high mr-2"></i>Reaction speed</div>
                               <div class="text-lg font-extrabold">
                                 ${labResult?.measurements?.rate != null ? labResult.measurements.rate : '—'}
                               </div>
                             </div>
-                            <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-2">
+                            <div class="metric-card">
                               <div class="text-[11px] text-slate-400"><i class="fa-solid fa-vial mr-2"></i>pH</div>
                               <div class="text-lg font-extrabold">
                                 ${labResult?.measurements?.ph != null ? labResult.measurements.ph : '—'}
                               </div>
                             </div>
-                            <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-2">
+                            <div class="metric-card">
                               <div class="text-[11px] text-slate-400"><i class="fa-solid fa-beaker mr-2"></i>Volume</div>
                               <div class="text-lg font-extrabold">${volumeMl}</div>
                             </div>
@@ -1171,31 +1459,39 @@ function App() {
                                 </div>`
                               : html`<div class="text-xs text-slate-500">Off</div>`}
                           </div>
+                          </div>
                         </div>
 
-                        <div class="bg-slate-950/35 border border-slate-800 rounded-xl p-4">
-                          <div class="text-xs text-slate-400 mb-2"><i class="fa-solid fa-screwdriver-wrench mr-2"></i>Tools rack</div>
-                          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            ${LAB_TOOLS.map((t) => {
-                              const active = selectedTools.includes(t.name);
-                              return html`
-                                <button
-                                  class=${classNames(
-                                    'rounded-lg px-3 py-2 border text-left text-xs transition group',
-                                    active ? 'border-yellow-400/60 bg-yellow-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-950/30'
-                                  )}
-                                  onClick=${() => toggleTool(t.name)}
-                                  title=${t.note}
-                                  type="button"
-                                >
-                                  <div class="flex items-center gap-2 min-w-0">
-                                    <i class=${classNames(t.icon, active ? 'text-yellow-200' : 'text-slate-300')}></i>
-                                    <div class="font-bold text-slate-100 truncate">${t.name}</div>
-                                  </div>
-                                  <div class="text-[11px] text-slate-400 truncate mt-1 group-hover:text-slate-300">${t.note}</div>
-                                </button>
-                              `;
-                            })}
+                        <div class="panel">
+                          <div class="panel-hd">
+                            <div class="title text-xs">
+                              <i class="fa-solid fa-screwdriver-wrench"></i> Tools rack
+                            </div>
+                            <div class="text-[11px] text-slate-400">${selectedTools.length} active</div>
+                          </div>
+                          <div class="panel-bd">
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              ${LAB_TOOLS.map((t) => {
+                                const active = selectedTools.includes(t.name);
+                                return html`
+                                  <button
+                                    class=${classNames(
+                                      'tool-card rounded-lg px-3 py-2 border text-left text-xs transition group',
+                                      active ? 'border-yellow-400/60 bg-yellow-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-950/30'
+                                    )}
+                                    onClick=${() => toggleTool(t.name)}
+                                    title=${t.note}
+                                    type="button"
+                                  >
+                                    <div class="flex items-center gap-2 min-w-0">
+                                      <i class=${classNames(t.icon, active ? 'text-yellow-200' : 'text-slate-300')}></i>
+                                      <div class="font-bold text-slate-100 truncate">${t.name}</div>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 truncate mt-1 group-hover:text-slate-300">${t.note}</div>
+                                  </button>
+                                `;
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1208,7 +1504,7 @@ function App() {
           </div>
 
           <div class="space-y-4 sm:space-y-6">
-            <div class="bg-slate-950/30 border border-slate-800 rounded-xl p-4 sm:p-6">
+            <div class="panel p-4 sm:p-6">
               <div class="flex items-center gap-2 font-bold text-emerald-200 mb-3">
                 <i class="fa-solid fa-eye"></i> Observations
               </div>
@@ -1250,7 +1546,7 @@ function App() {
                       <div class="text-xs text-slate-400">Time: ${formatDateTime(labResult.timestamp)}</div>
                       <button
                         class="btn btn-primary w-full"
-                        onClick=${() => setTab('notebook')}
+                        onClick=${() => goTab('notebook')}
                         type="button"
                       >
                         <i class="fa-solid fa-book"></i> View in Notebook
@@ -1260,7 +1556,7 @@ function App() {
                 : html`<div class="text-sm text-slate-500">Run an experiment to see observations here.</div>`}
             </div>
 
-            <div class="bg-slate-950/30 border border-slate-800 rounded-xl p-4 sm:p-6">
+            <div class="panel p-4 sm:p-6">
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2 font-bold text-cyan-200">
                   <i class="fa-solid fa-terminal"></i> Lab Console
@@ -1382,7 +1678,7 @@ function App() {
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div class="bg-slate-950/30 border border-slate-800 rounded-xl p-3 sm:p-4">
+          <div class="panel p-3 sm:p-4">
             <div class="text-xs text-slate-400 mb-2">Findings</div>
             <div class="max-h-[70vh] overflow-y-auto space-y-2 pr-1">
               ${list.length === 0
@@ -1405,7 +1701,7 @@ function App() {
             </div>
           </div>
 
-          <div class="lg:col-span-2 bg-slate-950/30 border border-slate-800 rounded-xl p-4 sm:p-6">
+          <div class="lg:col-span-2 panel p-4 sm:p-6">
             ${!active
               ? html`<div class="text-sm text-slate-500">Select a finding to view/edit.</div>`
               : html`
