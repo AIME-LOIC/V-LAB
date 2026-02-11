@@ -10,6 +10,7 @@ const TAB_ROUTES = {
   home: '/home',
   reactions: '/reactions',
   tools: '/tools',
+  periodic: '/periodic-table',
   lab: '/lab',
   notebook: '/notebook',
   about: '/about',
@@ -25,6 +26,9 @@ const TAB_TITLES = {
   notebook: 'Notebook',
   about: 'About',
 };
+
+const WEBSITE_TABS = new Set(['vlab', 'home', 'about']);
+const APP_TABS = new Set(['lab', 'notebook', 'periodic', 'reactions', 'tools']);
 
 const ELEMENTS = [
   { number: 1, symbol: 'H', name: 'Hydrogen', category: 'Nonmetal', group: 1, period: 1 },
@@ -145,6 +149,32 @@ const ELEMENTS = [
   { number: 116, symbol: 'Lv', name: 'Livermorium', category: 'Post-transition metal', group: 16, period: 7 },
   { number: 117, symbol: 'Ts', name: 'Tennessine', category: 'Halogen', group: 17, period: 7 },
   { number: 118, symbol: 'Og', name: 'Oganesson', category: 'Noble gas', group: 18, period: 7 },
+];
+
+const CATEGORY_CLASS = {
+  'Alkali metal': 'elem-alkali',
+  'Alkaline earth metal': 'elem-alkaline',
+  'Transition metal': 'elem-transition',
+  'Post-transition metal': 'elem-post',
+  Metalloid: 'elem-metalloid',
+  Nonmetal: 'elem-nonmetal',
+  Halogen: 'elem-halogen',
+  'Noble gas': 'elem-noble',
+  Lanthanide: 'elem-lanth',
+  Actinide: 'elem-act',
+};
+
+const CATEGORY_ORDER = [
+  'Alkali metal',
+  'Alkaline earth metal',
+  'Transition metal',
+  'Post-transition metal',
+  'Metalloid',
+  'Nonmetal',
+  'Halogen',
+  'Noble gas',
+  'Lanthanide',
+  'Actinide',
 ];
 
 function normalizePathname(pathname) {
@@ -389,6 +419,7 @@ async function apiPost(path, body) {
 function App() {
   const toast = useToast();
   const [tab, setTab] = React.useState(() => getTabFromLocation());
+  const [mode, setMode] = React.useState(() => (APP_TABS.has(getTabFromLocation()) ? 'app' : 'web'));
   const didInitRouteRef = React.useRef(false);
 
   const goTab = React.useCallback((nextTab) => {
@@ -401,6 +432,22 @@ function App() {
       window.history.pushState({ tab: normalized }, '', target);
     }
   }, []);
+
+  const openApp = React.useCallback(
+    (nextTab = 'lab') => {
+      setMode('app');
+      goTab(nextTab);
+    },
+    [goTab]
+  );
+
+  const openWebsite = React.useCallback(
+    (nextTab = 'vlab') => {
+      setMode('web');
+      goTab(nextTab);
+    },
+    [goTab]
+  );
 
   const [stats, setStats] = React.useState(null);
   const [reactions, setReactions] = React.useState([]);
@@ -473,6 +520,16 @@ function App() {
       didInitRouteRef.current = true;
     }
   }, [tab]);
+
+  React.useEffect(() => {
+    if (APP_TABS.has(tab) && mode !== 'app') {
+      setMode('app');
+      return;
+    }
+    if (WEBSITE_TABS.has(tab) && mode !== 'web') {
+      setMode('web');
+    }
+  }, [tab, mode]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -708,7 +765,7 @@ function App() {
             <button class="btn btn-danger" onClick=${loadBaseData} type="button">
               <i class="fa-solid fa-rotate"></i> Retry
             </button>
-            <button class="btn" onClick=${() => goTab('about')} type="button">
+            <button class="btn" onClick=${() => openWebsite('about')} type="button">
               <i class="fa-solid fa-circle-info"></i> Setup Help
             </button>
           </div>
@@ -721,15 +778,18 @@ function App() {
     const items = [
       ['vlab', 'V-LAB'],
       ['home', 'Home'],
-      ['reactions', 'Reactions'],
-      ['tools', 'Tools'],
+      ['about', 'About'],
+    ];
+    const appItems = [
       ['lab', 'Lab'],
       ['notebook', 'Notebook'],
-      ['about', 'About'],
+      ['periodic', 'Periodic Table'],
+      ['reactions', 'Reactions'],
+      ['tools', 'Tools'],
     ];
     return html`
       <nav class="nav-shell sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-4">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-4 flex-wrap">
           <div class="flex items-center gap-3">
             <div class="logo-mark"><i class="fa-solid fa-atom"></i></div>
             <div>
@@ -737,18 +797,37 @@ function App() {
               <div class="hidden sm:block text-xs text-slate-400">Virtual Science Lab</div>
             </div>
           </div>
-          <div class="flex gap-2 sm:gap-3 flex-wrap justify-end">
-            ${items.map(
-              ([key, label]) => html`
-                <button
-                  class=${classNames('nav-link', tab === key ? 'active' : '')}
-                  onClick=${() => goTab(key)}
-                  type="button"
-                >
-                  ${label}
-                </button>
-              `
-            )}
+          <div class="flex flex-wrap gap-3 items-center justify-end max-w-full">
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="text-[11px] text-slate-500 font-semibold tracking-widest uppercase">
+                ${mode === 'app' ? 'Lab App' : 'Website'}
+              </span>
+              ${(mode === 'app' ? appItems : items).map(
+                ([key, label]) => html`
+                  <button
+                    class=${classNames('nav-link', tab === key ? 'active' : '')}
+                    onClick=${() => (mode === 'app' ? openApp(key) : openWebsite(key))}
+                    type="button"
+                  >
+                    ${label}
+                  </button>
+                `
+              )}
+            </div>
+            <div class="h-6 w-px bg-slate-800/80 hidden lg:block"></div>
+            <div class="flex items-center gap-2">
+              ${mode === 'app'
+                ? html`
+                    <button class="btn" onClick=${() => openWebsite('vlab')} type="button">
+                      <i class="fa-solid fa-arrow-left"></i> Back to Website
+                    </button>
+                  `
+                : html`
+                    <button class="btn btn-solid" onClick=${() => openApp('lab')} type="button">
+                      <i class="fa-solid fa-flask-vial"></i> Get Started
+                    </button>
+                  `}
+            </div>
           </div>
         </div>
       </nav>
@@ -802,10 +881,10 @@ function App() {
             </div>
             <button
               class="btn btn-primary w-full mt-4"
-              onClick=${() => goTab('notebook')}
+              onClick=${() => openApp('lab')}
               type="button"
             >
-              <i class="fa-solid fa-book"></i> Open Notebook
+              <i class="fa-solid fa-flask-vial"></i> Get Started
             </button>
           </div>
         </div>
@@ -896,6 +975,138 @@ function App() {
     `;
   }
 
+  function PeriodicTable() {
+    const [query, setQuery] = React.useState('');
+    const [activeElement, setActiveElement] = React.useState(ELEMENTS[0]);
+
+    const lanthanides = React.useMemo(() => ELEMENTS.filter((e) => e.series === 'lanthanide'), []);
+    const actinides = React.useMemo(() => ELEMENTS.filter((e) => e.series === 'actinide'), []);
+    const lanthIndex = React.useMemo(() => new Map(lanthanides.map((e, i) => [e.number, i])), [lanthanides]);
+    const actIndex = React.useMemo(() => new Map(actinides.map((e, i) => [e.number, i])), [actinides]);
+
+    const filtered = React.useMemo(() => {
+      const q = query.trim().toLowerCase();
+      if (!q) return ELEMENTS;
+      return ELEMENTS.filter((e) => {
+        return (
+          e.name.toLowerCase().includes(q) ||
+          e.symbol.toLowerCase().includes(q) ||
+          String(e.number).includes(q) ||
+          (e.category || '').toLowerCase().includes(q)
+        );
+      });
+    }, [query]);
+
+    React.useEffect(() => {
+      if (!activeElement) return;
+      const stillThere = filtered.some((e) => e.number === activeElement.number);
+      if (!stillThere) setActiveElement(filtered[0] || ELEMENTS[0]);
+    }, [filtered, activeElement]);
+
+    function elementMatches(e) {
+      if (!query.trim()) return true;
+      return filtered.some((x) => x.number === e.number);
+    }
+
+    function gridPosition(e) {
+      if (e.series === 'lanthanide') {
+        const idx = lanthIndex.get(e.number) ?? 0;
+        return { row: 8, col: 3 + idx };
+      }
+      if (e.series === 'actinide') {
+        const idx = actIndex.get(e.number) ?? 0;
+        return { row: 9, col: 3 + idx };
+      }
+      return { row: e.period, col: e.group };
+    }
+
+    return html`
+      <div class="max-w-full mx-auto px-3 sm:px-4 py-6 sm:py-8 section">
+        <div class="flex items-end justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-bold title-grad">Periodic Table</h1>
+            <div class="text-sm text-slate-400 mt-1">All 118 elements with categories and quick detail view.</div>
+          </div>
+          <div class="min-w-[240px] w-full sm:w-auto">
+            <input
+              class="field"
+              placeholder="Search by name, symbol, number, or category..."
+              value=${query}
+              onInput=${(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div class="panel p-3 sm:p-4 mb-4">
+          <div class="flex flex-wrap gap-2 mb-3 text-[11px] text-slate-300">
+            ${CATEGORY_ORDER.map(
+              (c) => html`<span class=${classNames('status-pill', CATEGORY_CLASS[c] || 'elem-unknown')}>${c}</span>`
+            )}
+          </div>
+          ${activeElement
+            ? html`
+                <div class="grid grid-cols-1 sm:grid-cols-[160px_minmax(0,1fr)] gap-3 items-center">
+                  <div class=${classNames('element-card', CATEGORY_CLASS[activeElement.category] || 'elem-unknown')}>
+                    <div class="element-number">Atomic #${activeElement.number}</div>
+                    <div class="element-symbol text-3xl">${activeElement.symbol}</div>
+                    <div class="element-name text-base font-bold">${activeElement.name}</div>
+                  </div>
+                  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-slate-300">
+                    <div class="metric-card">
+                      <div class="text-[11px] text-slate-400">Category</div>
+                      <div class="font-semibold text-slate-100">${activeElement.category}</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="text-[11px] text-slate-400">Group</div>
+                      <div class="font-semibold text-slate-100">${activeElement.group ?? '—'}</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="text-[11px] text-slate-400">Period</div>
+                      <div class="font-semibold text-slate-100">${activeElement.period}</div>
+                    </div>
+                    <div class="metric-card">
+                      <div class="text-[11px] text-slate-400">Series</div>
+                      <div class="font-semibold text-slate-100">${activeElement.series || 'Main'}</div>
+                    </div>
+                  </div>
+                </div>
+              `
+            : html`<div class="text-sm text-slate-500">Select an element to see details.</div>`}
+        </div>
+
+        <div class="panel p-3 sm:p-4">
+          <div class="periodic-wrap">
+            <div class="periodic-grid">
+              ${ELEMENTS.map((e) => {
+                const pos = gridPosition(e);
+                const active = activeElement && activeElement.number === e.number;
+                const matches = elementMatches(e);
+                return html`
+                  <button
+                    class=${classNames(
+                      'element-card',
+                      CATEGORY_CLASS[e.category] || 'elem-unknown',
+                      matches ? '' : 'dim',
+                      active ? 'ring-2 ring-cyan-400/60' : ''
+                    )}
+                    style=${{ gridColumn: pos.col, gridRow: pos.row }}
+                    onClick=${() => setActiveElement(e)}
+                    type="button"
+                    title=${`${e.name} (${e.symbol})`}
+                  >
+                    <div class="element-number">${e.number}</div>
+                    <div class="element-symbol">${e.symbol}</div>
+                    <div class="element-name">${e.name}</div>
+                  </button>
+                `;
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function VLabWebsite() {
     return html`
       <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-10 section">
@@ -913,17 +1124,17 @@ function App() {
               <div class="mt-6 flex gap-3 flex-wrap">
                 <button
                   class="btn btn-solid"
-                  onClick=${() => goTab('lab')}
+                  onClick=${() => openApp('lab')}
                   type="button"
                 >
                   <i class="fa-solid fa-flask-vial"></i> Get Started
                 </button>
                 <button
                   class="btn"
-                  onClick=${() => goTab('notebook')}
+                  onClick=${() => openWebsite('about')}
                   type="button"
                 >
-                  <i class="fa-solid fa-book"></i> Open Notebook
+                  <i class="fa-solid fa-circle-info"></i> Learn More
                 </button>
               </div>
 
@@ -1827,6 +2038,7 @@ function App() {
     ${tab === 'home' ? html`<${Home} />` : null}
     ${tab === 'reactions' ? html`<${Reactions} />` : null}
     ${tab === 'tools' ? html`<${Tools} />` : null}
+    ${tab === 'periodic' ? html`<${PeriodicTable} />` : null}
     ${tab === 'lab' ? html`<${Lab} />` : null}
     ${tab === 'notebook' ? html`<${Notebook} />` : null}
     ${tab === 'about' ? html`<${About} />` : null}
