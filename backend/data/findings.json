@@ -1,5 +1,55 @@
 [
   {
+    "id": "finding_1770805906619_b91a06200a48a8",
+    "title": "Chemistry Lab: Oxygen (O₂)",
+    "content": "Mixture: Oxygen (O₂), Methane (CH₄)",
+    "experiment": "Oxygen (O₂), Methane (CH₄)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T12:31:46.630996",
+    "observations": "blue to yellow flame observed. Methane burns in oxygen to produce carbon dioxide and water",
+    "conclusion": "Combustion of Methane: CH₄ + 2O₂ → CO₂ + 2H₂O"
+  },
+  {
+    "id": "finding_1770805906454_a904b80349adc8",
+    "title": "Chemistry Lab: Oxygen (O₂)",
+    "content": "Mixture: Oxygen (O₂), Methane (CH₄)",
+    "experiment": "Oxygen (O₂), Methane (CH₄)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T12:31:46.461851",
+    "observations": "blue to yellow flame observed. Methane burns in oxygen to produce carbon dioxide and water",
+    "conclusion": "Combustion of Methane: CH₄ + 2O₂ → CO₂ + 2H₂O"
+  },
+  {
+    "id": "finding_1770805223437_de689232828f08",
+    "title": "Chemistry Lab: Nitrogen (N₂)",
+    "content": "Mixture: Nitrogen (N₂), Oxygen (O₂) · Tools: Gloves",
+    "experiment": "Nitrogen (N₂), Oxygen (O₂)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T12:20:23.447469",
+    "observations": "General chemical interaction: 2 reagents show observable change.",
+    "conclusion": "Reaction pathway not in database; interaction modeled."
+  },
+  {
+    "id": "finding_1770804088838_1cd88c45fa5ae8",
+    "title": "Chemistry Lab: Oxygen (O₂)",
+    "content": "Mixture: Oxygen (O₂), Hydrogen Gas (H₂) · Tools: Bunsen Burner",
+    "experiment": "Oxygen (O₂), Hydrogen Gas (H₂)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T12:01:28.845507",
+    "observations": "Blue flame with pale yellow border observed. Hydrogen burns in oxygen producing water",
+    "conclusion": "Combustion of Hydrogen: 2H₂ + O₂ → 2H₂O"
+  },
+  {
+    "id": "finding_1770803783599_3054b3ad0bbf3",
+    "title": "Chemistry Lab: Oxygen (O₂)",
+    "content": "Mixture: Oxygen (O₂), Hydrogen Gas (H₂)",
+    "experiment": "Oxygen (O₂), Hydrogen Gas (H₂)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T11:56:23.608577",
+    "observations": "Blue flame with pale yellow border observed. Hydrogen burns in oxygen producing water",
+    "conclusion": "Combustion of Hydrogen: 2H₂ + O₂ → 2H₂O"
+  },
+  {
     "id": "finding_1770800526902_b50934384a0c7",
     "title": "Chemistry Lab: Methane (CH₄)",
     "content": "Mixture: Methane (CH₄), Oxygen (O₂)",

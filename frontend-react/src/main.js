@@ -223,7 +223,7 @@ async function apiPost(path, body) {
 
 function App() {
   const toast = useToast();
-  const [tab, setTab] = React.useState('home');
+  const [tab, setTab] = React.useState('vlab');
 
   const [stats, setStats] = React.useState(null);
   const [reactions, setReactions] = React.useState([]);
@@ -252,6 +252,22 @@ function App() {
   const [labStage, setLabStage] = React.useState('idle'); // idle | mixing | reacting | done
   const [labProgress, setLabProgress] = React.useState(0); // 0..100
   const [labLog, setLabLog] = React.useState([]);
+  const labTimersRef = React.useRef({ interval: null, timeouts: [] });
+
+  function clearLabInterval() {
+    if (labTimersRef.current.interval) {
+      window.clearInterval(labTimersRef.current.interval);
+      labTimersRef.current.interval = null;
+    }
+  }
+
+  function clearLabTimers() {
+    clearLabInterval();
+    if (labTimersRef.current.timeouts.length) {
+      labTimersRef.current.timeouts.forEach((t) => window.clearTimeout(t));
+      labTimersRef.current.timeouts = [];
+    }
+  }
   const labTimerRef = React.useRef(null);
 
   const [findings, setFindings] = useLocalStorageState('vlab_findings_v2', []);
@@ -342,6 +358,7 @@ function App() {
     setLabResult(null);
     setLabStage('idle');
     setLabProgress(0);
+    clearLabTimers();
     setLabLog((prev) => [{ id: uid('log'), at: new Date().toISOString(), type: 'clear', message: 'Bench cleared.' }, ...prev]);
     toast.show('Cleared the lab bench.', 'success');
   }
@@ -356,6 +373,7 @@ function App() {
     setLabRunning(true);
     setLabStage('mixing');
     setLabProgress(0);
+    clearLabTimers();
     try {
       const payload = {
         chemicals: selectedChemicals.map((c) => c.name),
@@ -375,8 +393,7 @@ function App() {
       const tick = () => {
         setLabProgress((p) => Math.min(100, p + 3));
       };
-      if (labTimerRef.current) window.clearInterval(labTimerRef.current);
-      labTimerRef.current = window.setInterval(tick, 90);
+      labTimersRef.current.interval = window.setInterval(tick, 90);
 
       const data = await apiPost('/run-experiment', payload);
       setLabResult(data);
@@ -385,13 +402,9 @@ function App() {
       const rate = typeof data?.measurements?.rate === 'number' ? data.measurements.rate : 0.2;
       const phaseMs = Math.max(650, Math.round(1600 - rate * 900));
       setLabStage('reacting');
-      window.setTimeout(() => setLabStage('done'), phaseMs);
-      window.setTimeout(() => setLabProgress(100), Math.max(400, Math.round(phaseMs * 0.85)));
-
-      if (labTimerRef.current) {
-        window.clearInterval(labTimerRef.current);
-        labTimerRef.current = null;
-      }
+      labTimersRef.current.timeouts.push(window.setTimeout(() => setLabStage('done'), phaseMs));
+      labTimersRef.current.timeouts.push(window.setTimeout(() => setLabProgress(100), Math.max(400, Math.round(phaseMs * 0.85))));
+      clearLabInterval();
 
       const createdAt = data.timestamp || new Date().toISOString();
       const finding = {
@@ -438,10 +451,18 @@ function App() {
       toast.show(`Experiment failed: ${String(e.message || e)}`, 'error');
       setLabStage('idle');
       setLabProgress(0);
+      clearLabTimers();
     } finally {
       setLabRunning(false);
     }
   }
+
+  React.useEffect(() => {
+    if (tab !== 'lab') {
+      clearLabTimers();
+    }
+    return () => clearLabTimers();
+  }, [tab]);
 
   const filteredReactions = React.useMemo(() => {
     return (Array.isArray(reactions) ? reactions : []).filter((r) => {
@@ -494,7 +515,7 @@ function App() {
       ['about', 'About'],
     ];
     return html`
-      <nav class="bg-black/40 backdrop-blur-xl sticky top-0 z-40 border-b border-cyan-500/20">
+      <nav class="nav-shell sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <div class="text-xl sm:text-2xl font-extrabold tracking-tight">
@@ -508,13 +529,9 @@ function App() {
             ${items.map(
               ([key, label]) => html`
                 <button
-                  class=${classNames(
-                    'px-3 py-1.5 rounded-lg border text-sm transition',
-                    tab === key
-                      ? 'border-cyan-400/50 bg-cyan-500/10 text-cyan-200'
-                      : 'border-slate-800 hover:border-slate-600 text-slate-200 bg-slate-900/40'
-                  )}
+                  class=${classNames('nav-link', tab === key ? 'active' : '')}
                   onClick=${() => setTab(key)}
+                  type="button"
                 >
                   ${label}
                 </button>
@@ -531,26 +548,26 @@ function App() {
       <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 section">
         <div class="flex items-end justify-between gap-4 flex-wrap mb-5">
           <div>
-            <h1 class="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-            <div class="text-sm text-slate-400 mt-1">Professional lab bench · instrument controls · notebook.</div>
+            <h1 class="text-2xl sm:text-3xl font-bold title-grad">Dashboard</h1>
+            <div class="text-sm text-slate-400 mt-1">Clean, guided lab simulator for students.</div>
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <div class="rounded-xl border p-4 sm:p-6 bg-cyan-950/20 border-cyan-500/20">
+          <div class="kpi p-4 sm:p-6">
             <div class="text-3xl sm:text-4xl mb-2">🧪</div>
-            <div class="text-sm text-slate-300">Reactions</div>
-            <div class="text-3xl font-bold mt-1 text-cyan-200">${stats ? stats.total_reactions : '—'}</div>
+            <div class="kpi-label">Reactions</div>
+            <div class="kpi-value text-3xl mt-1 text-cyan-200">${stats ? stats.total_reactions : '—'}</div>
           </div>
-          <div class="rounded-xl border p-4 sm:p-6 bg-purple-950/20 border-purple-500/20">
+          <div class="kpi p-4 sm:p-6">
             <div class="text-3xl sm:text-4xl mb-2">🔬</div>
-            <div class="text-sm text-slate-300">Tools</div>
-            <div class="text-3xl font-bold mt-1 text-purple-200">${stats ? stats.total_tools : '—'}</div>
+            <div class="kpi-label">Tools</div>
+            <div class="kpi-value text-3xl mt-1 text-purple-200">${stats ? stats.total_tools : '—'}</div>
           </div>
-          <div class="rounded-xl border p-4 sm:p-6 bg-emerald-950/20 border-emerald-500/20">
+          <div class="kpi p-4 sm:p-6">
             <div class="text-3xl sm:text-4xl mb-2">📚</div>
-            <div class="text-sm text-slate-300">Categories</div>
-            <div class="text-3xl font-bold mt-1 text-emerald-200">${stats ? stats.categories : '—'}</div>
+            <div class="kpi-label">Categories</div>
+            <div class="kpi-value text-3xl mt-1 text-emerald-200">${stats ? stats.categories : '—'}</div>
           </div>
         </div>
 
@@ -572,10 +589,11 @@ function App() {
               Findings saved: <span class="font-bold text-emerald-100">${Array.isArray(findings) ? findings.length : 0}</span>
             </div>
             <button
-              class="mt-4 w-full bg-emerald-600/80 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition"
+              class="btn btn-primary w-full mt-4"
               onClick=${() => setTab('notebook')}
+              type="button"
             >
-              Open Notebook
+              <i class="fa-solid fa-book"></i> Open Notebook
             </button>
           </div>
         </div>
@@ -673,7 +691,7 @@ function App() {
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
             <div class="min-w-0">
               <div class="text-xs text-slate-300 tracking-widest uppercase">Virtual Science Lab</div>
-              <h1 class="text-3xl sm:text-5xl font-extrabold mt-2 leading-tight">
+              <h1 class="text-3xl sm:text-5xl font-extrabold mt-2 leading-tight title-grad">
                 Learn Science by <span class="text-cyan-300">doing</span>.
               </h1>
               <p class="text-slate-300 mt-4 max-w-xl">
@@ -682,18 +700,18 @@ function App() {
 
               <div class="mt-6 flex gap-3 flex-wrap">
                 <button
-                  class="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-3 rounded-xl font-bold transition"
+                  class="btn btn-solid"
                   onClick=${() => setTab('lab')}
                   type="button"
                 >
-                  Start Lab
+                  <i class="fa-solid fa-flask-vial"></i> Get Started
                 </button>
                 <button
-                  class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-100 px-5 py-3 rounded-xl font-bold transition"
+                  class="btn"
                   onClick=${() => setTab('notebook')}
                   type="button"
                 >
-                  Open Notebook
+                  <i class="fa-solid fa-book"></i> Open Notebook
                 </button>
               </div>
 
@@ -789,23 +807,22 @@ function App() {
       <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 section">
         <div class="flex items-end justify-between gap-4 flex-wrap mb-5">
           <div>
-            <h1 class="text-2xl sm:text-3xl font-bold">Chem Lab Bench</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold title-grad">Chem Lab Bench</h1>
             <div class="text-sm text-slate-400 mt-1">1) Add chemicals → 2) Choose tools → 3) Set heat/volume → 4) Run → 5) Save notes.</div>
           </div>
           <div class="flex gap-2">
             <button
-              class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-100 px-3 py-2 rounded-lg text-sm transition"
+              class="btn"
               onClick=${clearLab}
+              type="button"
             >
               <i class="fa-solid fa-eraser mr-2"></i>Clear
             </button>
             <button
-              class=${classNames(
-                'px-3 py-2 rounded-lg text-sm font-bold transition border',
-                labRunning ? 'bg-purple-700/30 border-purple-500/40 text-purple-100' : 'bg-purple-600 hover:bg-purple-500 border-purple-400/40'
-              )}
+              class=${classNames('btn btn-solid', labRunning ? 'opacity-70' : '')}
               disabled=${labRunning}
               onClick=${runExperiment}
+              type="button"
             >
               <i class="fa-solid fa-play mr-2"></i>${labRunning ? 'Running...' : 'Run'}
             </button>
@@ -816,105 +833,102 @@ function App() {
           <div class="lg:col-span-2 space-y-4 sm:space-y-6">
             <div class="lab-surface rounded-2xl p-4 sm:p-6">
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="md:col-span-1 glass rounded-xl p-3">
-                  <div class="flex items-center justify-between gap-3 mb-3">
-                    <div class="text-xs text-slate-300 font-bold flex items-center gap-2">
+                <div class="md:col-span-1 panel">
+                  <div class="panel-hd">
+                    <div class="title text-xs">
                       <i class="fa-solid fa-warehouse"></i> Chemical Storage
                     </div>
-                    <div class="text-[11px] text-slate-400">Drag → Beaker</div>
+                    <div class="chip">Drag → Beaker</div>
                   </div>
-                  <div class="flex gap-2 mb-2">
-                    <select
-                      class="flex-1 bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm"
-                      value=${labType}
-                      onChange=${(e) => setLabType(e.target.value)}
-                    >
-                      <option value="Chemistry">Chemistry</option>
-                      <option value="Biology">Biology</option>
-                      <option value="Physics">Physics</option>
-                    </select>
-                    <div class=${classNames('led', apiError ? '' : 'on')} title="API status"></div>
-                  </div>
-                  <input
-                    class="w-full bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:border-cyan-500 outline-none"
-                    placeholder="Search (name / symbol)..."
-                    value=${labQuery}
-                    onInput=${(e) => setLabQuery(e.target.value)}
-                  />
-                  <div class="mt-3 max-h-[420px] overflow-y-auto space-y-2 pr-1">
-                    ${filteredChemicals.slice(0, 120).map((c) => {
-                      const selected = selectedChemicals.some((x) => x.name === c.name);
-                      return html`
-                        <div
-                          draggable="true"
-                          onDragStart=${(e) => onDragStartChemical(e, c)}
-                          onClick=${() => addChemical(c)}
-                          class=${classNames(
-                            'select-none cursor-grab active:cursor-grabbing rounded-xl border px-3 py-2 transition flex items-center justify-between gap-2',
-                            selected ? 'border-emerald-500/35 bg-emerald-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-950/30'
-                          )}
-                          title="Drag into beaker"
-                        >
-                          <div class="min-w-0 flex-1">
-                            <div class="text-sm text-slate-100 truncate">${c.name}</div>
-                            <div class="text-[11px] text-slate-400 truncate">${c.category}</div>
+                  <div class="panel-bd">
+                    <div class="flex gap-2 mb-2">
+                      <select
+                        class="field"
+                        value=${labType}
+                        onChange=${(e) => setLabType(e.target.value)}
+                      >
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Biology">Biology</option>
+                        <option value="Physics">Physics</option>
+                      </select>
+                      <div class=${classNames('led', apiError ? '' : 'on')} title="API status"></div>
+                    </div>
+                    <input
+                      class="field"
+                      placeholder="Search (name / symbol)..."
+                      value=${labQuery}
+                      onInput=${(e) => setLabQuery(e.target.value)}
+                    />
+                    <div class="mt-3 max-h-[420px] overflow-y-auto space-y-2 pr-1">
+                      ${filteredChemicals.slice(0, 120).map((c) => {
+                        const selected = selectedChemicals.some((x) => x.name === c.name);
+                        return html`
+                          <div
+                            draggable="true"
+                            onDragStart=${(e) => onDragStartChemical(e, c)}
+                            onClick=${() => addChemical(c)}
+                            class=${classNames(
+                              'select-none cursor-grab active:cursor-grabbing rounded-xl border px-3 py-2 transition flex items-center justify-between gap-2',
+                              selected ? 'border-emerald-500/35 bg-emerald-500/10' : 'border-slate-800 hover:border-slate-600 bg-slate-950/30'
+                            )}
+                            title="Drag into beaker"
+                          >
+                            <div class="min-w-0 flex-1">
+                              <div class="text-sm text-slate-100 truncate">${c.name}</div>
+                              <div class="text-[11px] text-slate-400 truncate">${c.category}</div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                              <span class="text-xs mono text-slate-300 truncate max-w-[80px]">${c.symbol}</span>
+                              <span class="h-3 w-3 rounded-full border border-white/10" style=${{ background: c.color || '#64748b' }}></span>
+                            </div>
                           </div>
-                          <div class="flex items-center gap-2 shrink-0">
-                            <span class="text-xs font-mono text-slate-300 truncate max-w-[80px]">${c.symbol}</span>
-                            <span class="h-3 w-3 rounded-full border border-white/10" style=${{ background: c.color || '#64748b' }}></span>
-                          </div>
-                        </div>
-                      `;
-                    })}
-                  </div>
-                  <div class="mt-3 text-[11px] text-slate-500">
-                    Mobile: tap any chemical to add (or drag on desktop).
+                        `;
+                      })}
+                    </div>
+                    <div class="mt-3 text-[11px] text-slate-500">
+                      Mobile: tap any chemical to add (or drag on desktop).
+                    </div>
                   </div>
                 </div>
 
                 <div class="md:col-span-2 space-y-4">
-                  <div class="glass rounded-xl p-4">
-                    <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                      <div class="text-xs text-slate-300 font-bold flex items-center gap-2">
+                  <div class="panel">
+                    <div class="panel-hd">
+                      <div class="title text-xs">
                         <i class="fa-solid fa-table"></i> Lab Table
                       </div>
                       <div class="flex items-center gap-2 flex-wrap justify-end min-w-0">
                         <div class="text-[11px] text-slate-400">
-                          Step: <span class="font-mono">${labStage}</span> · Volume: <span class="font-mono">${volumeMl} mL</span>
+                          Step: <span class="mono">${labStage}</span> · Volume: <span class="mono">${volumeMl} mL</span>
                         </div>
-                        <div class="flex items-center gap-1 bg-slate-900/50 border border-slate-800 rounded-lg p-1">
+                        <div class="flex items-center gap-1 bg-slate-900/50 border border-slate-800 rounded-xl p-1">
                           <button
-                            class=${classNames(
-                              'px-2 py-1 rounded-md text-[11px] font-bold transition',
-                              vessel === 'beaker' ? 'bg-cyan-500/15 text-cyan-200' : 'text-slate-300 hover:text-white'
-                            )}
+                            class=${classNames('chip', vessel === 'beaker' ? 'on' : '')}
                             onClick=${() => {
                               setVessel('beaker');
                               setLabLog((p) => [{ id: uid('log'), at: new Date().toISOString(), type: 'vessel', message: 'Switched to beaker.' }, ...p]);
                             }}
                             type="button"
                           >
-                            Beaker
+                            <i class="fa-solid fa-flask-vial"></i> Beaker
                           </button>
                           <button
-                            class=${classNames(
-                              'px-2 py-1 rounded-md text-[11px] font-bold transition',
-                              vessel === 'tube' ? 'bg-purple-500/15 text-purple-200' : 'text-slate-300 hover:text-white'
-                            )}
+                            class=${classNames('chip', vessel === 'tube' ? 'on' : '')}
                             onClick=${() => {
                               setVessel('tube');
                               setLabLog((p) => [{ id: uid('log'), at: new Date().toISOString(), type: 'vessel', message: 'Switched to test tube.' }, ...p]);
                             }}
                             type="button"
                           >
-                            Test tube
+                            <i class="fa-solid fa-vial"></i> Test tube
                           </button>
                         </div>
                       </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div class="relative bg-slate-950/35 border border-slate-800 rounded-xl p-4 beaker-glow">
+                    <div class="panel-bd">
+                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="relative bg-slate-950/35 border border-slate-800 rounded-xl p-4 beaker-glow">
                         <div class="text-xs text-slate-400 mb-2 flex items-center justify-between min-w-0">
                           <span class="truncate"><i class="fa-solid fa-flask-vial mr-2"></i>${vessel === 'beaker' ? 'Beaker' : 'Test tube'}</span>
                           <span class="font-mono shrink-0">${selectedChemicals.length} reagents</span>
@@ -1185,6 +1199,7 @@ function App() {
                           </div>
                         </div>
                       </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1234,10 +1249,11 @@ function App() {
 
                       <div class="text-xs text-slate-400">Time: ${formatDateTime(labResult.timestamp)}</div>
                       <button
-                        class="w-full bg-emerald-600/80 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition"
+                        class="btn btn-primary w-full"
                         onClick=${() => setTab('notebook')}
+                        type="button"
                       >
-                        View in Notebook
+                        <i class="fa-solid fa-book"></i> View in Notebook
                       </button>
                     </div>
                   `
@@ -1356,17 +1372,11 @@ function App() {
             <div class="text-sm text-slate-400 mt-1">Findings are auto-saved from the Lab.</div>
           </div>
           <div class="flex gap-2 flex-wrap">
-            <button
-              class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-100 px-3 py-2 rounded-lg text-sm transition"
-              onClick=${exportJson}
-            >
-              <i class="fa-solid fa-download mr-2"></i>Export JSON
+            <button class="btn" onClick=${exportJson} type="button">
+              <i class="fa-solid fa-download"></i> Export JSON
             </button>
-            <button
-              class="bg-emerald-600/80 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition"
-              onClick=${createBlank}
-            >
-              <i class="fa-solid fa-plus mr-2"></i>New
+            <button class="btn btn-primary" onClick=${createBlank} type="button">
+              <i class="fa-solid fa-plus"></i> New
             </button>
           </div>
         </div>
@@ -1409,17 +1419,11 @@ function App() {
                       </div>
                     </div>
                     <div class="flex gap-2">
-                      <button
-                        class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-100 px-3 py-2 rounded-lg text-sm transition"
-                        onClick=${deleteActive}
-                      >
-                        <i class="fa-solid fa-trash mr-2"></i>Delete
+                      <button class="btn btn-danger" onClick=${deleteActive} type="button">
+                        <i class="fa-solid fa-trash"></i> Delete
                       </button>
-                      <button
-                        class="bg-emerald-600/80 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold transition"
-                        onClick=${saveEdits}
-                      >
-                        <i class="fa-solid fa-floppy-disk mr-2"></i>Save
+                      <button class="btn btn-primary" onClick=${saveEdits} type="button">
+                        <i class="fa-solid fa-floppy-disk"></i> Save
                       </button>
                     </div>
                   </div>
