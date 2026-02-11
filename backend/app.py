@@ -967,6 +967,40 @@ def get_findings():
     except Exception:
         return jsonify([]), 200
 
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint for non-technical setups"""
+    return jsonify({
+        "status": "ok",
+        "service": "v-lab-backend",
+        "timestamp": datetime.now().isoformat()
+    })
+
+@app.route('/api/meta', methods=['GET'])
+def meta():
+    """Basic metadata for the V-LAB website/frontends"""
+    return jsonify({
+        "name": "Virtual Science Lab (V-LAB)",
+        "version": "1.0",
+        "description": "Interactive science lab simulator with reactions, tools, experiments, and a notebook.",
+        "features": [
+            "Chemical reaction explorer",
+            "Virtual lab mixing + observations",
+            "Heat/volume controls + measurements",
+            "Notebook (findings) persistence"
+        ],
+        "endpoints": {
+            "stats": "/api/stats",
+            "reactions": "/api/reactions",
+            "tools": "/api/tools",
+            "chemicals": "/api/chemicals",
+            "run_experiment": "/api/run-experiment",
+            "findings_get": "/api/findings",
+            "findings_post": "/api/findings",
+            "health": "/api/health"
+        }
+    })
+
 @app.route('/', methods=['GET'])
 def index():
     return jsonify({"message": "Virtual Science Lab Backend - API Running"})

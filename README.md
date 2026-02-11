@@ -47,6 +47,7 @@ npm run dev
 Open: http://localhost:5173
 
 React UI includes:
+- V-LAB page: overview + 3D demo (Three.js)
 - Lab: mix chemicals and run experiments (auto-observations)
 - Notebook: auto-saved findings + edit/delete/export
 

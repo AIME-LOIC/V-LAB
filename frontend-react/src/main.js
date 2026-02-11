@@ -10,6 +10,112 @@ function classNames(...values) {
   return values.filter(Boolean).join(' ');
 }
 
+function ThreeHero() {
+  const hostRef = React.useRef(null);
+  const rafRef = React.useRef(0);
+
+  React.useEffect(() => {
+    let disposed = false;
+    let renderer;
+    let resizeObserver;
+
+    (async () => {
+      const THREE = await import('https://esm.sh/three@0.160.0');
+      if (disposed) return;
+
+      const host = hostRef.current;
+      if (!host) return;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+      camera.position.set(0, 0.6, 3.2);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.setSize(host.clientWidth, host.clientHeight, false);
+      host.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+      const key = new THREE.PointLight(0x22d3ee, 1.2, 0, 2);
+      key.position.set(2.5, 2.0, 2.0);
+      scene.add(key);
+      const fill = new THREE.PointLight(0xa855f7, 0.9, 0, 2);
+      fill.position.set(-2.2, 1.2, 1.6);
+      scene.add(fill);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const atom = (radius, color) => new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32), new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.05 }));
+
+      const core = atom(0.34, 0x38bdf8);
+      group.add(core);
+
+      const orbiters = [
+        { r: 0.16, c: 0xfacc15, p: [0.9, 0.1, 0.0] },
+        { r: 0.14, c: 0xa855f7, p: [-0.7, 0.35, 0.2] },
+        { r: 0.12, c: 0x22c55e, p: [0.1, -0.65, -0.15] },
+        { r: 0.11, c: 0xf97316, p: [-0.05, 0.65, -0.35] },
+      ].map((o) => {
+        const m = atom(o.r, o.c);
+        m.position.set(o.p[0], o.p[1], o.p[2]);
+        group.add(m);
+        return m;
+      });
+
+      const points = [core.position, ...orbiters.map((m) => m.position)];
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.35 });
+      for (let i = 1; i < points.length; i += 1) {
+        const geo = new THREE.BufferGeometry().setFromPoints([points[0], points[i]]);
+        group.add(new THREE.Line(geo, lineMat));
+      }
+
+      const animate = () => {
+        if (disposed) return;
+        group.rotation.y += 0.008;
+        group.rotation.x = 0.22 + Math.sin(Date.now() * 0.001) * 0.06;
+        renderer.render(scene, camera);
+        rafRef.current = requestAnimationFrame(animate);
+      };
+      animate();
+
+      const resize = () => {
+        const w = Math.max(1, host.clientWidth);
+        const h = Math.max(1, host.clientHeight);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false);
+      };
+
+      resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(host);
+      resize();
+    })().catch(() => {
+      // ignore
+    });
+
+    return () => {
+      disposed = true;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (resizeObserver) resizeObserver.disconnect();
+      if (renderer) {
+        try {
+          renderer.dispose();
+        } catch {
+          // ignore
+        }
+        try {
+          renderer.domElement?.remove();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
+
+  return html`<div ref=${hostRef} class="w-full h-[260px] rounded-xl border border-slate-800 bg-slate-950/30"></div>`;
+}
+
 function uid(prefix = 'id') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
@@ -140,6 +246,7 @@ function App() {
   const [selectedTools, setSelectedTools] = React.useState([]);
   const [heatLevel, setHeatLevel] = React.useState(40);
   const [volumeMl, setVolumeMl] = React.useState(250);
+  const [vessel, setVessel] = React.useState('beaker'); // beaker | tube
   const [labRunning, setLabRunning] = React.useState(false);
   const [labResult, setLabResult] = React.useState(null);
   const [labStage, setLabStage] = React.useState('idle'); // idle | mixing | reacting | done
@@ -256,6 +363,7 @@ function App() {
         tools: selectedTools,
         heat: heatLevel,
         volume_ml: volumeMl,
+        vessel,
       };
 
       setLabLog((prev) => [
@@ -296,6 +404,7 @@ function App() {
         chemicals: payload.chemicals,
         tools: payload.tools,
         lab: labType,
+        vessel,
         measurements: data.measurements || null,
         reaction: data.reaction || null,
         createdAt,
@@ -376,6 +485,7 @@ function App() {
 
   function TopNav() {
     const items = [
+      ['vlab', 'V-LAB'],
       ['home', 'Home'],
       ['reactions', 'Reactions'],
       ['tools', 'Tools'],
@@ -556,6 +666,76 @@ function App() {
     `;
   }
 
+  function VLabWebsite() {
+    return html`
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-10 section">
+        <div class="lab-surface rounded-2xl p-5 sm:p-8 overflow-hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            <div class="min-w-0">
+              <div class="text-xs text-slate-300 tracking-widest uppercase">Virtual Science Lab</div>
+              <h1 class="text-3xl sm:text-5xl font-extrabold mt-2 leading-tight">
+                Learn Science by <span class="text-cyan-300">doing</span>.
+              </h1>
+              <p class="text-slate-300 mt-4 max-w-xl">
+                Mix chemicals safely, control lab tools, observe results, and save notes — built for students and teachers.
+              </p>
+
+              <div class="mt-6 flex gap-3 flex-wrap">
+                <button
+                  class="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-3 rounded-xl font-bold transition"
+                  onClick=${() => setTab('lab')}
+                  type="button"
+                >
+                  Start Lab
+                </button>
+                <button
+                  class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 text-slate-100 px-5 py-3 rounded-xl font-bold transition"
+                  onClick=${() => setTab('notebook')}
+                  type="button"
+                >
+                  Open Notebook
+                </button>
+              </div>
+
+              <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="glass rounded-xl p-4 min-w-0">
+                  <div class="font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-flask-vial text-cyan-200"></i> Real lab steps
+                  </div>
+                  <div class="text-sm text-slate-300 mt-1">
+                    Drag reagents, use tools, run experiments, and observe.
+                  </div>
+                </div>
+                <div class="glass rounded-xl p-4 min-w-0">
+                  <div class="font-bold text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-book text-emerald-200"></i> Notes included
+                  </div>
+                  <div class="text-sm text-slate-300 mt-1">
+                    Results are saved automatically in the Notebook.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass rounded-2xl p-4 sm:p-6 overflow-hidden">
+              <div class="flex items-center justify-between mb-3 min-w-0">
+                <div class="font-bold text-slate-100 flex items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-cube text-purple-200"></i>
+                  <span class="truncate">3D demo (Three.js)</span>
+                </div>
+                <div class="text-[11px] text-slate-400 shrink-0">auto-rotating</div>
+              </div>
+              <${ThreeHero} />
+              <div class="text-[11px] text-slate-400 mt-3">
+                The lab simulator works even if 3D is slow on older devices.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function Lab() {
     function liquidColor() {
       if (labStage === 'idle' || selectedChemicals.length === 0) return 'rgba(34,211,238,0.08)';
@@ -610,7 +790,7 @@ function App() {
         <div class="flex items-end justify-between gap-4 flex-wrap mb-5">
           <div>
             <h1 class="text-2xl sm:text-3xl font-bold">Chem Lab Bench</h1>
-            <div class="text-sm text-slate-400 mt-1">Drag reagents onto the bench, pour into the beaker, control instruments, run, observe.</div>
+            <div class="text-sm text-slate-400 mt-1">1) Add chemicals → 2) Choose tools → 3) Set heat/volume → 4) Run → 5) Save notes.</div>
           </div>
           <div class="flex gap-2">
             <button
@@ -698,16 +878,46 @@ function App() {
                       <div class="text-xs text-slate-300 font-bold flex items-center gap-2">
                         <i class="fa-solid fa-table"></i> Lab Table
                       </div>
-                      <div class="text-[11px] text-slate-400">
-                        Step: <span class="font-mono">${labStage}</span> · Volume: <span class="font-mono">${volumeMl} mL</span>
+                      <div class="flex items-center gap-2 flex-wrap justify-end min-w-0">
+                        <div class="text-[11px] text-slate-400">
+                          Step: <span class="font-mono">${labStage}</span> · Volume: <span class="font-mono">${volumeMl} mL</span>
+                        </div>
+                        <div class="flex items-center gap-1 bg-slate-900/50 border border-slate-800 rounded-lg p-1">
+                          <button
+                            class=${classNames(
+                              'px-2 py-1 rounded-md text-[11px] font-bold transition',
+                              vessel === 'beaker' ? 'bg-cyan-500/15 text-cyan-200' : 'text-slate-300 hover:text-white'
+                            )}
+                            onClick=${() => {
+                              setVessel('beaker');
+                              setLabLog((p) => [{ id: uid('log'), at: new Date().toISOString(), type: 'vessel', message: 'Switched to beaker.' }, ...p]);
+                            }}
+                            type="button"
+                          >
+                            Beaker
+                          </button>
+                          <button
+                            class=${classNames(
+                              'px-2 py-1 rounded-md text-[11px] font-bold transition',
+                              vessel === 'tube' ? 'bg-purple-500/15 text-purple-200' : 'text-slate-300 hover:text-white'
+                            )}
+                            onClick=${() => {
+                              setVessel('tube');
+                              setLabLog((p) => [{ id: uid('log'), at: new Date().toISOString(), type: 'vessel', message: 'Switched to test tube.' }, ...p]);
+                            }}
+                            type="button"
+                          >
+                            Test tube
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div class="relative bg-slate-950/35 border border-slate-800 rounded-xl p-4 beaker-glow">
-                        <div class="text-xs text-slate-400 mb-2 flex items-center justify-between">
-                          <span><i class="fa-solid fa-flask-vial mr-2"></i>Beaker</span>
-                          <span class="font-mono">${selectedChemicals.length} reagents</span>
+                        <div class="text-xs text-slate-400 mb-2 flex items-center justify-between min-w-0">
+                          <span class="truncate"><i class="fa-solid fa-flask-vial mr-2"></i>${vessel === 'beaker' ? 'Beaker' : 'Test tube'}</span>
+                          <span class="font-mono shrink-0">${selectedChemicals.length} reagents</span>
                         </div>
 
                         <div
@@ -767,27 +977,50 @@ function App() {
                                 })
                               : null}
 
-                            <!-- beaker glass -->
-                            <svg class="absolute inset-0" viewBox="0 0 200 260" preserveAspectRatio="none" aria-hidden="true">
-                              <defs>
-                                <linearGradient id="glassGrad" x1="0" x2="1">
-                                  <stop offset="0" stop-color="rgba(255,255,255,0.08)"></stop>
-                                  <stop offset="0.5" stop-color="rgba(255,255,255,0.03)"></stop>
-                                  <stop offset="1" stop-color="rgba(255,255,255,0.07)"></stop>
-                                </linearGradient>
-                              </defs>
-                              <path
-                                d="M30,10 h140 v18 c0,10 -8,18 -18,18 h-12 v160 c0,26 -20,44 -40,44 h-20 c-20,0 -40,-18 -40,-44 v-160 h-12 c-10,0 -18,-8 -18,-18 z"
-                                fill="url(#glassGrad)"
-                                stroke="rgba(148,163,184,0.35)"
-                                stroke-width="2"
-                              />
-                              <!-- measurement ticks -->
-                              ${Array.from({ length: 6 }).map((_, i) => {
-                                const y = 70 + i * 26;
-                                return html`<line x1="155" y1="${y}" x2="170" y2="${y}" stroke="rgba(148,163,184,0.25)" stroke-width="2" />`;
-                              })}
-                            </svg>
+                            ${vessel === 'beaker'
+                              ? html`
+                                  <svg class="absolute inset-0" viewBox="0 0 200 260" preserveAspectRatio="none" aria-hidden="true">
+                                    <defs>
+                                      <linearGradient id="glassGrad" x1="0" x2="1">
+                                        <stop offset="0" stop-color="rgba(255,255,255,0.08)"></stop>
+                                        <stop offset="0.5" stop-color="rgba(255,255,255,0.03)"></stop>
+                                        <stop offset="1" stop-color="rgba(255,255,255,0.07)"></stop>
+                                      </linearGradient>
+                                    </defs>
+                                    <path
+                                      d="M30,10 h140 v18 c0,10 -8,18 -18,18 h-12 v160 c0,26 -20,44 -40,44 h-20 c-20,0 -40,-18 -40,-44 v-160 h-12 c-10,0 -18,-8 -18,-18 z"
+                                      fill="url(#glassGrad)"
+                                      stroke="rgba(148,163,184,0.35)"
+                                      stroke-width="2"
+                                    />
+                                    ${Array.from({ length: 6 }).map((_, i) => {
+                                      const y = 70 + i * 26;
+                                      return html`<line x1="155" y1="${y}" x2="170" y2="${y}" stroke="rgba(148,163,184,0.25)" stroke-width="2" />`;
+                                    })}
+                                  </svg>
+                                `
+                              : html`
+                                  <svg class="absolute inset-0" viewBox="0 0 200 260" preserveAspectRatio="none" aria-hidden="true">
+                                    <defs>
+                                      <linearGradient id="tubeGrad" x1="0" x2="1">
+                                        <stop offset="0" stop-color="rgba(255,255,255,0.08)"></stop>
+                                        <stop offset="0.55" stop-color="rgba(255,255,255,0.02)"></stop>
+                                        <stop offset="1" stop-color="rgba(255,255,255,0.07)"></stop>
+                                      </linearGradient>
+                                    </defs>
+                                    <path
+                                      d="M70,18 h60 a14,14 0 0 1 14,14 v160 a44,44 0 0 1 -44,44 h0 a44,44 0 0 1 -44,-44 v-160 a14,14 0 0 1 14,-14 z"
+                                      fill="url(#tubeGrad)"
+                                      stroke="rgba(148,163,184,0.35)"
+                                      stroke-width="2"
+                                    />
+                                    <rect x="64" y="10" width="72" height="18" rx="8" fill="rgba(148,163,184,0.14)" stroke="rgba(148,163,184,0.25)" />
+                                    ${Array.from({ length: 6 }).map((_, i) => {
+                                      const y = 70 + i * 26;
+                                      return html`<line x1="125" y1="${y}" x2="140" y2="${y}" stroke="rgba(148,163,184,0.25)" stroke-width="2" />`;
+                                    })}
+                                  </svg>
+                                `}
                           </div>
 
                           <div class="mt-3 flex flex-wrap gap-2 min-h-10 min-w-0">
@@ -808,25 +1041,36 @@ function App() {
                           </div>
                         </div>
 
-                        <!-- Test tube visual (for “real lab” feeling) -->
-                        <div class="mt-4 flex items-center justify-between gap-3">
-                          <div class="text-xs text-slate-400"><i class="fa-solid fa-vial mr-2"></i>Test tube</div>
-                          <div class=${classNames('relative w-[110px] h-[46px] rounded-full tube overflow-hidden', labStage === 'mixing' ? 'shake' : '')}>
-                            <div class="absolute left-2 top-1 bottom-1 w-9 rounded-full tube-cap"></div>
-                            <div class="absolute inset-0" style=${{ background: `linear-gradient(90deg, rgba(255,255,255,0.06), transparent)` }}></div>
-                            <div class="absolute left-10 right-2 bottom-1 rounded-full" style=${{
-                              height: '60%',
-                              background: showLayers ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(250,204,21,0.22))' : liquidColor(),
-                              borderTop: '1px solid rgba(255,255,255,0.10)',
-                            }}></div>
-                          </div>
-                        </div>
+                        ${vessel === 'beaker'
+                          ? html`
+                              <div class="mt-4 flex items-center justify-between gap-3 min-w-0">
+                                <div class="text-xs text-slate-400 truncate"><i class="fa-solid fa-vial mr-2"></i>Test tube (preview)</div>
+                                <div class=${classNames('relative w-[110px] h-[46px] rounded-full tube overflow-hidden shrink-0', labStage === 'mixing' ? 'shake' : '')}>
+                                  <div class="absolute left-2 top-1 bottom-1 w-9 rounded-full tube-cap"></div>
+                                  <div class="absolute inset-0" style=${{ background: `linear-gradient(90deg, rgba(255,255,255,0.06), transparent)` }}></div>
+                                  <div class="absolute left-10 right-2 bottom-1 rounded-full" style=${{
+                                    height: '60%',
+                                    background: showLayers ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(250,204,21,0.22))' : liquidColor(),
+                                    borderTop: '1px solid rgba(255,255,255,0.10)',
+                                  }}></div>
+                                </div>
+                              </div>
+                            `
+                          : html`
+                              <div class="mt-4 flex items-center justify-between gap-3 min-w-0">
+                                <div class="text-xs text-slate-400 truncate"><i class="fa-solid fa-flask-vial mr-2"></i>Beaker (preview)</div>
+                                <div class="relative w-[110px] h-[46px] rounded-xl border border-slate-800 bg-slate-950/30 overflow-hidden shrink-0">
+                                  <div class="absolute inset-0" style=${{ background: `linear-gradient(90deg, rgba(255,255,255,0.06), transparent)` }}></div>
+                                  <div class="absolute left-0 right-0 bottom-0" style=${{ height: '68%', background: liquidColor(), borderTop: '1px solid rgba(255,255,255,0.10)' }}></div>
+                                </div>
+                              </div>
+                            `}
                       </div>
 
                       <div class="space-y-3">
                         <div class="bg-slate-950/35 border border-slate-800 rounded-xl p-4">
-                          <div class="text-xs text-slate-400 mb-2 flex items-center justify-between">
-                            <span><i class="fa-solid fa-sliders mr-2"></i>Controls</span>
+                          <div class="text-xs text-slate-400 mb-2 flex items-center justify-between min-w-0">
+                            <span class="truncate"><i class="fa-solid fa-sliders mr-2"></i>Controls</span>
                             <span class="font-mono">${labProgress}%</span>
                           </div>
 
@@ -1279,6 +1523,7 @@ function App() {
     <${TopNav} />
     ${toast.node}
     <${ConnectionBanner} />
+    ${tab === 'vlab' ? html`<${VLabWebsite} />` : null}
     ${tab === 'home' ? html`<${Home} />` : null}
     ${tab === 'reactions' ? html`<${Reactions} />` : null}
     ${tab === 'tools' ? html`<${Tools} />` : null}
