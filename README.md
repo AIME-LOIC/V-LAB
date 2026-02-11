@@ -37,14 +37,18 @@ python -m http.server 8000
 ```
 Open: http://localhost:8000
 
-### React Frontend (no build tools)
-This repo also includes a lightweight React UI served as static files (React is loaded via CDN).
+### React Frontend (Pro UI, runs with `npm run dev`)
+This repo includes a React UI that intentionally avoids native build tools (to prevent `esbuild`/Vite install issues on some systems). It still runs via `npm run dev` using a tiny Node dev server + `/api` proxy.
 
 ```bash
 cd frontend-react
-python -m http.server 5173
+npm run dev
 ```
 Open: http://localhost:5173
+
+React UI includes:
+- Lab: mix chemicals and run experiments (auto-observations)
+- Notebook: auto-saved findings + edit/delete/export
 
 ## Project Structure
 

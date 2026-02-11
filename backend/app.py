@@ -1,6 +1,9 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import json
+import math
+import os
+import re
 from datetime import datetime
 
 app = Flask(__name__)
@@ -601,12 +604,19 @@ EXPERIMENTS = {
 CHEMICALS = {
     "methane": {"name": "Methane (CH₄)", "symbol": "CH₄", "category": "Gas", "color": "#87CEEB"},
     "oxygen": {"name": "Oxygen (O₂)", "symbol": "O₂", "category": "Gas", "color": "#87CEEB"},
+    "hydrogen": {"name": "Hydrogen Gas (H₂)", "symbol": "H₂", "category": "Gas", "color": "#B3E5FC"},
+    "nitrogen": {"name": "Nitrogen (N₂)", "symbol": "N₂", "category": "Gas", "color": "#A5B4FC"},
+    "co2": {"name": "Carbon Dioxide (CO₂)", "symbol": "CO₂", "category": "Gas", "color": "#CBD5E1"},
     "hcl": {"name": "Hydrochloric Acid (HCl)", "symbol": "HCl", "category": "Acid", "color": "#FF6B6B"},
     "naoh": {"name": "Sodium Hydroxide (NaOH)", "symbol": "NaOH", "category": "Base", "color": "#4ECDC4"},
+    "acetic": {"name": "Acetic Acid (CH₃COOH)", "symbol": "CH₃COOH", "category": "Acid", "color": "#FB7185"},
     "pbno3": {"name": "Lead Nitrate Pb(NO₃)₂", "symbol": "Pb(NO₃)₂", "category": "Salt", "color": "#FFE66D"},
     "ki": {"name": "Potassium Iodide (KI)", "symbol": "KI", "category": "Salt", "color": "#FFE66D"},
     "al": {"name": "Aluminum (Al)", "symbol": "Al", "category": "Metal", "color": "#C0C0C0"},
+    "fe": {"name": "Iron (Fe)", "symbol": "Fe", "category": "Metal", "color": "#B45309"},
     "fe2o3": {"name": "Iron Oxide (Fe₂O₃)", "symbol": "Fe₂O₃", "category": "Compound", "color": "#8B4513"},
+    "caco3": {"name": "Calcium Carbonate (CaCO₃)", "symbol": "CaCO₃", "category": "Salt", "color": "#F8FAFC"},
+    "cac2": {"name": "Calcium Carbide (CaC₂)", "symbol": "CaC₂", "category": "Compound", "color": "#E2E8F0"},
     "h2o2": {"name": "Hydrogen Peroxide (H₂O₂)", "symbol": "H₂O₂", "category": "Chemical", "color": "#E0E0E0"},
     "enzyme": {"name": "Catalase Enzyme", "symbol": "Enzyme", "category": "Biological", "color": "#90EE90"},
     "yeast": {"name": "Yeast", "symbol": "Yeast", "category": "Biological", "color": "#D4A574"},
@@ -616,6 +626,10 @@ CHEMICALS = {
     "salt": {"name": "Salt (NaCl)", "symbol": "NaCl", "category": "Salt", "color": "#FFFFFF"},
     "sugar": {"name": "Sugar", "symbol": "C₁₂H₂₂O₁₁", "category": "Sugar", "color": "#FFD700"},
     "water": {"name": "Water (H₂O)", "symbol": "H₂O", "category": "Solvent", "color": "#87CEEB"},
+    "ethylene": {"name": "Ethylene (C₂H₄)", "symbol": "C₂H₄", "category": "Gas", "color": "#93C5FD"},
+    "salicylic": {"name": "Salicylic Acid (C₆H₅COOH)", "symbol": "C₆H₅COOH", "category": "Acid", "color": "#FCA5A5"},
+    "diazonium": {"name": "Diazonium Salt (ArN₂⁺)", "symbol": "ArN₂⁺", "category": "Chemical", "color": "#FDE68A"},
+    "aldehyde": {"name": "Aldehyde (RCHO)", "symbol": "RCHO", "category": "Organic", "color": "#D8B4FE"},
     "oil": {"name": "Oil", "symbol": "Oil", "category": "Liquid", "color": "#FFD700"},
     "alcohol": {"name": "Alcohol", "symbol": "C₂H₅OH", "category": "Liquid", "color": "#E6E6FA"},
     "honey": {"name": "Honey", "symbol": "Honey", "category": "Liquid", "color": "#DAA520"}
@@ -659,113 +673,247 @@ def get_chemicals():
 def run_experiment():
     """Run a virtual experiment by mixing chemicals and using tools"""
     data = request.json
-    chemicals_used = data.get('chemicals', [])
-    experiment_type = data.get('type', '').lower()
-    tools_used = data.get('tools', [])
-    
-    # Smart reaction generation based on chemicals
-    reaction_map = {
-        # Chemistry Lab Reactions
-        ('methane', 'oxygen'): {
-            'result': 'Bright blue flame and heat release! Combustion reaction.',
-            'observation': 'Blue to yellow flame - Methane combusting',
-            'safety': 'High temperature, ensure ventilation',
-            'color': 'Blue flame'
-        },
-        ('hydrochloric acid', 'sodium hydroxide'): {
-            'result': 'Neutralization reaction! Solution becomes warm.',
-            'observation': 'Heat release, solution becomes clear',
-            'safety': 'Exothermic - wear gloves',
-            'color': 'Clear solution, warming'
-        },
-        ('lead nitrate', 'potassium iodide'): {
-            'result': 'Yellow precipitate forms! Precipitation reaction.',
-            'observation': 'Bright yellow solid forms',
-            'safety': 'Lead compound - dispose carefully',
-            'color': 'Yellow precipitate'
-        },
-        ('sugar', 'hydrochloric acid'): {
-            'result': 'Dehydration reaction - carbon forms!',
-            'observation': 'Black carbon residue appears',
-            'safety': 'Exothermic reaction',
-            'color': 'Black carbon formation'
-        },
-        # Biology Lab Reactions
-        ('yeast', 'glucose'): {
-            'result': 'Fermentation begins! Gas bubbles forming.',
-            'observation': 'Rapid bubble formation - CO₂ production',
-            'safety': 'Anaerobic fermentation in progress',
-            'color': 'Bubbling solution'
-        },
-        ('enzyme', 'sugar'): {
-            'result': 'Enzymatic reaction! Breaking down substrate.',
-            'observation': 'Solution changes rapidly',
-            'safety': 'Biochemical reaction safe',
-            'color': 'Color change observed'
-        },
-        # Physics Lab Reactions
-        ('water', 'oil'): {
-            'result': 'Immiscible liquids - density separation!',
-            'observation': 'Two distinct layers form',
-            'safety': 'Physical mixture only',
-            'color': 'Layered liquids'
-        },
-    }
-    
-    # Generate base result
-    result = {
-        "chemicals": chemicals_used,
-        "result": "Reaction occurred!",
-        "observation": "Chemical mixture being analyzed",
-        "timestamp": datetime.now().isoformat(),
-        "success": True,
-        "tools": tools_used
-    }
-    
-    # Check for matching reactions
-    chem_lower = [c.lower() for c in chemicals_used]
-    
-    # Look for exact matches
-    for key, reaction in reaction_map.items():
-        if len(chem_lower) >= len(key) and all(k in chem_lower for k in key):
-            result.update(reaction)
-            break
-    
-    # Tool modifiers
-    tool_effects = []
-    if 'Bunsen Burner' in tools_used:
-        result['result'] += ' [Accelerated by heat]'
-        tool_effects.append('heat acceleration')
-    if 'Thermometer' in tools_used:
-        result['observation'] += ' (Temperature monitored)'
-        tool_effects.append('temperature control')
-    if 'Microscope' in tools_used:
-        result['observation'] = f'[Microscopic view] {result["observation"]}'
-        tool_effects.append('detailed observation')
-    if 'Stirring Rod' in tools_used:
-        result['observation'] += ' - thoroughly mixed'
-        tool_effects.append('uniform mixing')
-    if 'Pipette' in tools_used:
-        result['observation'] += ' - precise transfer achieved'
-        tool_effects.append('precise handling')
-    if 'pH Meter' in tools_used:
-        result['observation'] += ' - pH level detected'
-        tool_effects.append('acidity monitoring')
-    if 'Gloves' in tools_used:
-        result['safety'] = 'Safety protection active - ' + result.get('safety', 'Safe')
-        tool_effects.append('safety precautions')
-    
-    # If no known reaction, create a generic one based on lab type
-    if 'observation' not in result or result['observation'] == 'Chemical mixture being analyzed':
-        observations = {
-            'chemistry': f'Mixed {len(chemicals_used)} chemicals - exothermic reaction detected',
-            'biology': f'{len(chemicals_used)} biological samples interacting - enzymatic activity',
-            'physics': f'Physical properties of {len(chemicals_used)} substances being observed'
+    chemicals_used = data.get('chemicals', []) or []
+    experiment_type = (data.get('type') or '').lower()
+    tools_used = data.get('tools', []) or []
+    heat_level = data.get('heat', 0) or 0
+    volume_ml = data.get('volume_ml', 250) or 250
+
+    def clamp_number(value, min_value, max_value, default):
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return default
+        return max(min_value, min(max_value, number))
+
+    heat_level = clamp_number(heat_level, 0, 100, 0)
+    volume_ml = clamp_number(volume_ml, 50, 2000, 250)
+
+    # Normalize chemicals to inventory entries where possible.
+    inventory_by_name = {v["name"].lower(): v for v in CHEMICALS.values()}
+    inventory_by_symbol = {v["symbol"].lower(): v for v in CHEMICALS.values()}
+
+    normalized = []
+    for raw in chemicals_used:
+        raw_str = str(raw).strip()
+        key = raw_str.lower()
+        chem = inventory_by_name.get(key) or inventory_by_symbol.get(key)
+        if not chem:
+            # Try partial match for common user inputs.
+            chem = next((v for n, v in inventory_by_name.items() if key in n), None)
+        normalized.append(
+            {
+                "name": chem["name"] if chem else raw_str,
+                "symbol": chem["symbol"] if chem else raw_str,
+                "category": chem.get("category", "Unknown") if chem else "Unknown",
+            }
+        )
+
+    provided_symbols = {c["symbol"] for c in normalized if c.get("symbol")}
+    provided_categories = {c["category"] for c in normalized if c.get("category")}
+
+    def required_symbols_from_equation(equation):
+        """Extract a set of reactant-like symbols from the equation LHS.
+
+        Note: the REACTIONS dataset includes simplified reactants lists (often incomplete),
+        so equation parsing is used to improve matching.
+        """
+        if not equation:
+            return set()
+        parts = re.split(r"\s*(?:→|⇌)\s*", str(equation), maxsplit=1)
+        lhs = parts[0] if parts else str(equation)
+        tokens = [t.strip() for t in lhs.split("+")]
+        symbols = set()
+        for t in tokens:
+            if not t:
+                continue
+            # Skip energy/light terms
+            if not re.search(r"[A-Z]", t) and not re.search(r"[₀-₉]", t):
+                continue
+            # Remove leading coefficients like "2H₂O"
+            t = re.sub(r"^\s*\d+\s*", "", t)
+            # Handle polymerization forms like "n(C₂H₄)"
+            t = re.sub(r"^\s*n\s*", "", t)
+            t = t.strip()
+            if t.startswith("(") and t.endswith(")"):
+                t = t[1:-1].strip()
+            # Collapse multiple spaces
+            t = re.sub(r"\s+", " ", t)
+            if " " in t:
+                # Still looks like a phrase ("electrical energy") rather than a chemical formula
+                continue
+            symbols.add(t)
+        return symbols
+
+    # Pick the best matching reaction from the database based on reactant symbols.
+    best = None
+    best_required = set()
+    for reaction in REACTIONS.values():
+        required = required_symbols_from_equation(reaction.get("equation"))
+        if not required:
+            required = {r.get("symbol") for r in reaction.get("reactants", []) if r.get("symbol")}
+        if not required:
+            continue
+        # Avoid over-matching single-reactant reactions when the user mixes multiple chemicals.
+        # (Example: any mixture containing H₂O should not automatically become "Electrolysis of Water".)
+        if len(required) == 1 and len(provided_symbols) > 1:
+            continue
+        if required.issubset(provided_symbols) and len(required) > len(best_required):
+            best = reaction
+            best_required = required
+
+    def estimate_ph(categories, has_ph_meter):
+        if not has_ph_meter:
+            return None
+        if "Acid" in categories and "Base" in categories:
+            return 7.0
+        if "Acid" in categories:
+            return 2.5
+        if "Base" in categories:
+            return 11.5
+        return 7.0
+
+    def tool_notes(tools):
+        notes = []
+        if "Microscope" in tools:
+            notes.append("Microscope: detailed observation enabled")
+        if "Stirring Rod" in tools:
+            notes.append("Stirring Rod: uniform mixing achieved")
+        if "Pipette" in tools:
+            notes.append("Pipette: precise transfer achieved")
+        if "Thermometer" in tools:
+            notes.append("Thermometer: temperature monitored")
+        if "pH Meter" in tools:
+            notes.append("pH Meter: acidity/basicity measured")
+        if "Gloves" in tools:
+            notes.append("Gloves: extra safety protection")
+        if "Bunsen Burner" in tools:
+            notes.append("Bunsen Burner: heat applied")
+        return notes
+
+    effective_heat = heat_level if "Bunsen Burner" in tools_used else 0
+    if heat_level > 0 and effective_heat == 0:
+        tools_used = list(tools_used) + ["(Heat ignored: add Bunsen Burner)"]
+
+    ambient_c = 22.0
+    volume_factor = math.sqrt(max(1.0, volume_ml / 250.0))
+
+    reaction_summary = None
+    observation = "Mixture prepared on lab bench."
+    result_text = "Interaction observed."
+    safety = "Standard lab safety"
+    color = "No visible change"
+    energy = 0.0
+    reaction_type = "Physical"
+
+    # If we matched a known reaction, use it.
+    if best:
+        reaction_summary = {
+            "id": best.get("id"),
+            "name": best.get("name"),
+            "equation": best.get("equation"),
+            "category": best.get("category"),
+            "type": best.get("type"),
+            "energyRelease": best.get("energyRelease"),
         }
-        result['observation'] = observations.get(experiment_type, 'Reaction in progress')
-        result['result'] = f'Experiment with {chemicals_used[0] if chemicals_used else "unknown"} completed successfully!'
-    
-    return jsonify(result)
+        reaction_type = best.get("type") or reaction_type
+        energy = float(best.get("energyRelease") or 0.0)
+        color = best.get("color") or color
+        safety = best.get("hazard") or safety
+        observation = f"{color} observed. {best.get('description') or 'Reaction underway.'}"
+        result_text = f"{best.get('name')}: {best.get('equation')}"
+    else:
+        # Always generate a meaningful interaction, even for unknown combos.
+        categories = provided_categories
+        if "Acid" in categories and "Base" in categories:
+            reaction_type = "Exothermic"
+            energy = 45.0
+            color = "Clear solution; mild warming"
+            observation = "Neutralization interaction: temperature rises slightly and pH trends toward neutral."
+            result_text = "Salt + water formed (neutralization)."
+            safety = "Corrosive reagents possible — wear gloves and goggles"
+        elif "Metal" in categories and "Acid" in categories:
+            reaction_type = "Exothermic"
+            energy = 60.0
+            color = "Bubbles and slight heating"
+            observation = "Metal + acid interaction: bubbles indicate gas formation."
+            result_text = "Salt formed; hydrogen gas may be released."
+            safety = "Flammable gas risk — keep away from flames"
+        elif "Solvent" in categories and "Liquid" in categories and any(c["symbol"] == "Oil" for c in normalized):
+            reaction_type = "Physical"
+            energy = 0.0
+            color = "Layer separation"
+            observation = "Immiscible mixture: liquids separate into layers based on density."
+            result_text = "No chemical reaction; physical separation observed."
+            safety = "Safe (avoid spills)"
+        elif "Sugar" in categories and "Acid" in categories:
+            reaction_type = "Exothermic"
+            energy = 30.0
+            color = "Darkening/char formation"
+            observation = "Dehydration interaction: solution darkens as carbon-rich material forms."
+            result_text = "Organic decomposition products formed."
+            safety = "Irritating fumes possible — use ventilation"
+        else:
+            # Generic but still plausible based on lab type.
+            if experiment_type == "biology":
+                reaction_type = "Biochemical"
+                energy = 10.0
+                color = "Subtle cloudiness"
+                observation = f"Biological interaction: {len(normalized)} samples show gradual change."
+                result_text = "Enzymatic/biochemical activity detected."
+                safety = "Safe (standard bio precautions)"
+            elif experiment_type == "physics":
+                reaction_type = "Physical"
+                energy = 0.0
+                color = "Phase/density change"
+                observation = f"Physical interaction: material properties of {len(normalized)} substances observed."
+                result_text = "No chemical transformation; physical properties recorded."
+                safety = "Safe"
+            else:
+                reaction_type = "Chemical"
+                energy = 15.0
+                color = "Mild change"
+                observation = f"General chemical interaction: {len(normalized)} reagents show observable change."
+                result_text = "Reaction pathway not in database; interaction modeled."
+                safety = "Use standard PPE"
+
+    # Temperature model: tool heat + reaction energy, reduced by volume.
+    heat_delta = (effective_heat * 0.45) / volume_factor
+    reaction_delta = 0.0
+    if "Exothermic" in reaction_type:
+        reaction_delta = min(35.0, max(0.0, energy / 25.0)) / volume_factor
+    elif "Endothermic" in reaction_type:
+        reaction_delta = -min(12.0, max(0.0, abs(energy) / 120.0)) / volume_factor
+    temperature_c = round(ambient_c + heat_delta + reaction_delta, 1)
+
+    # A simple "reaction rate" proxy for UI (0..1).
+    rate = clamp_number((effective_heat / 100.0) + (0.15 if "Exothermic" in reaction_type else 0.05), 0, 1, 0.1)
+
+    measurements = {
+        "temperature_c": temperature_c,
+        "heat_level": round(effective_heat, 1),
+        "volume_ml": round(volume_ml, 1),
+        "ph": estimate_ph(provided_categories, "pH Meter" in tools_used),
+        "rate": round(rate, 2),
+    }
+
+    payload = {
+        "success": True,
+        "timestamp": datetime.now().isoformat(),
+        "chemicals": [c["name"] for c in normalized],
+        "symbols": [c["symbol"] for c in normalized],
+        "categories": sorted(provided_categories),
+        "tools": tools_used,
+        "toolNotes": tool_notes(tools_used),
+        "reaction": reaction_summary,
+        "observation": observation,
+        "result": result_text,
+        "color": color,
+        "safety": safety,
+        "measurements": measurements,
+    }
+
+    return jsonify(payload)
 
 @app.route('/api/findings', methods=['POST'])
 def save_findings():
@@ -781,7 +929,43 @@ def save_findings():
         "observations": data.get('observations', ''),
         "conclusion": data.get('conclusion', '')
     }
+    # Persist findings to a local JSON file to make the notebook usable across devices.
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    os.makedirs(data_dir, exist_ok=True)
+    path = os.path.join(data_dir, "findings.json")
+
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+                if not isinstance(existing, list):
+                    existing = []
+        else:
+            existing = []
+        existing.insert(0, finding)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(existing[:500], f, ensure_ascii=False, indent=2)
+    except Exception:
+        # If persistence fails, still return the finding so the UI can store it locally.
+        pass
+
     return jsonify(finding), 201
+
+@app.route('/api/findings', methods=['GET'])
+def get_findings():
+    """Get saved findings/notes"""
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    path = os.path.join(data_dir, "findings.json")
+    if not os.path.exists(path):
+        return jsonify([])
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            return jsonify([])
+        return jsonify(data)
+    except Exception:
+        return jsonify([]), 200
 
 @app.route('/', methods=['GET'])
 def index():

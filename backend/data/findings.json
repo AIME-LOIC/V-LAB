@@ -1,0 +1,22 @@
+[
+  {
+    "id": "finding_1770799414599_e56711159cc0c8",
+    "title": "Chemistry Lab: Water (H₂O)",
+    "content": "Mixture: Water (H₂O), Oil",
+    "experiment": "Water (H₂O), Oil",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T10:43:34.606879",
+    "observations": "Immiscible mixture: liquids separate into layers based on density.",
+    "conclusion": "No chemical reaction; physical separation observed."
+  },
+  {
+    "id": "finding_1770798025964_36d0917267b578",
+    "title": "Chemistry Lab: Oil",
+    "content": "Mixture: Oil, Water (H₂O)",
+    "experiment": "Oil, Water (H₂O)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T10:20:25.972650",
+    "observations": "Immiscible mixture: liquids separate into layers based on density.",
+    "conclusion": "No chemical reaction; physical separation observed."
+  }
+]
