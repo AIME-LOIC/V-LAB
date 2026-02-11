@@ -775,11 +775,7 @@ function App() {
   }
 
   function TopNav() {
-    const items = [
-      ['vlab', 'V-LAB'],
-      ['home', 'Home'],
-      ['about', 'About'],
-    ];
+    const items = [['vlab', 'V-LAB']];
     const appItems = [
       ['lab', 'Lab'],
       ['notebook', 'Notebook'],
@@ -879,11 +875,7 @@ function App() {
             <div class="text-sm text-slate-300">
               Findings saved: <span class="font-bold text-emerald-100">${Array.isArray(findings) ? findings.length : 0}</span>
             </div>
-            <button
-              class="btn btn-primary w-full mt-4"
-              onClick=${() => openApp('lab')}
-              type="button"
-            >
+            <button class="btn btn-primary w-full mt-4" onClick=${() => openApp('lab')} type="button">
               <i class="fa-solid fa-flask-vial"></i> Get Started
             </button>
           </div>
@@ -1131,10 +1123,13 @@ function App() {
                 </button>
                 <button
                   class="btn"
-                  onClick=${() => openWebsite('about')}
+                  onClick=${() => {
+                    const el = document.getElementById('problems');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   type="button"
                 >
-                  <i class="fa-solid fa-circle-info"></i> Learn More
+                  <i class="fa-solid fa-lightbulb"></i> Problems We Solve
                 </button>
               </div>
 
@@ -1198,6 +1193,91 @@ function App() {
             <div class="text-sm text-slate-300 mt-2">
               Visual warnings and lab-safe outcomes for classroom use.
             </div>
+          </div>
+        </div>
+
+        <div id="problems" class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div class="panel p-5 sm:p-6">
+            <div class="text-xs text-slate-300 tracking-widest uppercase">Problems</div>
+            <h2 class="text-2xl sm:text-3xl font-bold mt-2">Real labs are expensive, crowded, and risky.</h2>
+            <p class="text-slate-300 mt-3">
+              Many schools cannot run frequent experiments due to cost, safety requirements, and limited equipment. Students
+              often watch instead of doing, and notes are inconsistent.
+            </p>
+            <ul class="mt-4 space-y-2 text-sm text-slate-300">
+              <li class="flex gap-2"><i class="fa-solid fa-triangle-exclamation text-orange-300"></i> Safety limits reduce hands‑on time.</li>
+              <li class="flex gap-2"><i class="fa-solid fa-stopwatch text-cyan-300"></i> Setups consume classroom time.</li>
+              <li class="flex gap-2"><i class="fa-solid fa-screwdriver-wrench text-purple-300"></i> Equipment is scarce or outdated.</li>
+              <li class="flex gap-2"><i class="fa-solid fa-book text-emerald-300"></i> Observations are hard to standardize.</li>
+            </ul>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="panel p-4">
+              <div class="h-32 rounded-xl bg-gradient-to-br from-cyan-500/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+              <div class="text-sm text-slate-300 mt-3">Image: crowded lab bench</div>
+            </div>
+            <div class="panel p-4">
+              <div class="h-32 rounded-xl bg-gradient-to-br from-amber-400/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+              <div class="text-sm text-slate-300 mt-3">Image: safety restrictions</div>
+            </div>
+            <div class="panel p-4 sm:col-span-2">
+              <div class="h-36 rounded-xl bg-gradient-to-br from-purple-500/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+              <div class="text-sm text-slate-300 mt-3">Image: limited equipment</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="solutions" class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div class="panel p-5 sm:p-6">
+            <div class="text-xs text-slate-300 tracking-widest uppercase">Solutions</div>
+            <h3 class="text-xl font-bold mt-2">Interactive lab simulator</h3>
+            <p class="text-sm text-slate-300 mt-2">
+              Students drag reagents, adjust heat/volume, and run experiments with clear, instrument-style feedback.
+            </p>
+          </div>
+          <div class="panel p-5 sm:p-6">
+            <div class="text-xs text-slate-300 tracking-widest uppercase">Solutions</div>
+            <h3 class="text-xl font-bold mt-2">Guided workflow</h3>
+            <p class="text-sm text-slate-300 mt-2">
+              Step-by-step guidance reduces confusion and helps non‑technical users complete labs confidently.
+            </p>
+          </div>
+          <div class="panel p-5 sm:p-6">
+            <div class="text-xs text-slate-300 tracking-widest uppercase">Solutions</div>
+            <h3 class="text-xl font-bold mt-2">Auto‑saved Notebook</h3>
+            <p class="text-sm text-slate-300 mt-2">
+              Observations and results are captured automatically for review and assessment.
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 sm:gap-6">
+          <div class="panel p-5 sm:p-6">
+            <div class="text-xs text-slate-300 tracking-widest uppercase">How It Works</div>
+            <h3 class="text-2xl font-bold mt-2">From setup to observation in minutes.</h3>
+            <ol class="mt-4 space-y-2 text-sm text-slate-300">
+              <li class="flex gap-2"><span class="chip">1</span> Choose lab type and reagents.</li>
+              <li class="flex gap-2"><span class="chip">2</span> Select tools and set heat/volume.</li>
+              <li class="flex gap-2"><span class="chip">3</span> Run the experiment and observe changes.</li>
+              <li class="flex gap-2"><span class="chip">4</span> Save findings in the Notebook.</li>
+            </ol>
+          </div>
+          <div class="panel p-5 sm:p-6">
+            <div class="h-44 rounded-xl bg-gradient-to-br from-emerald-500/15 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+            <div class="text-sm text-slate-300 mt-3">Image: guided workflow view</div>
+            <div class="text-xs text-slate-500 mt-2">Built for classrooms and self‑study.</div>
+          </div>
+        </div>
+
+        <div class="mt-8 sm:mt-10 panel p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div class="text-xs text-slate-300 tracking-widest uppercase">Ready to start</div>
+              <div class="text-2xl font-bold mt-2">Give students a real lab experience—without the risk.</div>
+            </div>
+            <button class="btn btn-solid" onClick=${() => openApp('lab')} type="button">
+              <i class="fa-solid fa-flask-vial"></i> Launch Lab App
+            </button>
           </div>
         </div>
       </div>
