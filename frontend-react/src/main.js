@@ -213,6 +213,7 @@ function ThreeHero() {
     let disposed = false;
     let renderer;
     let resizeObserver;
+    let rootGroup;
 
     (async () => {
       const THREE = await import('https://esm.sh/three@0.160.0');
@@ -223,52 +224,213 @@ function ThreeHero() {
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-      camera.position.set(0, 0.6, 3.2);
+      camera.position.set(0.0, 0.85, 4.2);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
       renderer.setSize(host.clientWidth, host.clientHeight, false);
       host.appendChild(renderer.domElement);
 
-      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-      const key = new THREE.PointLight(0x22d3ee, 1.2, 0, 2);
-      key.position.set(2.5, 2.0, 2.0);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+      const key = new THREE.PointLight(0x22d3ee, 1.35, 0, 2);
+      key.position.set(2.7, 2.2, 2.4);
       scene.add(key);
-      const fill = new THREE.PointLight(0xa855f7, 0.9, 0, 2);
-      fill.position.set(-2.2, 1.2, 1.6);
+      const fill = new THREE.PointLight(0xa855f7, 1.05, 0, 2);
+      fill.position.set(-2.4, 1.2, 1.6);
       scene.add(fill);
+      const rim = new THREE.DirectionalLight(0xffffff, 0.55);
+      rim.position.set(0.2, 1.8, -2.8);
+      scene.add(rim);
 
       const group = new THREE.Group();
       scene.add(group);
+      rootGroup = group;
 
-      const atom = (radius, color) => new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 32), new THREE.MeshStandardMaterial({ color, roughness: 0.35, metalness: 0.05 }));
+      const atomGroup = new THREE.Group();
+      const dnaGroup = new THREE.Group();
+      group.add(atomGroup);
+      group.add(dnaGroup);
 
-      const core = atom(0.34, 0x38bdf8);
-      group.add(core);
+      // Put the atom "behind" as a big atmospheric backdrop.
+      atomGroup.position.set(1.15, 0.12, -1.55);
+      atomGroup.scale.setScalar(1.28);
 
-      const orbiters = [
-        { r: 0.16, c: 0xfacc15, p: [0.9, 0.1, 0.0] },
-        { r: 0.14, c: 0xa855f7, p: [-0.7, 0.35, 0.2] },
-        { r: 0.12, c: 0x22c55e, p: [0.1, -0.65, -0.15] },
-        { r: 0.11, c: 0xf97316, p: [-0.05, 0.65, -0.35] },
-      ].map((o) => {
-        const m = atom(o.r, o.c);
-        m.position.set(o.p[0], o.p[1], o.p[2]);
-        group.add(m);
+      // Keep the DNA helix in the foreground (inside the div focus).
+      dnaGroup.position.set(-0.05, -0.06, 0.35);
+
+      // Atom: nucleus + orbit rings + moving electrons (React-ish vibe).
+      const nucleus = new THREE.Mesh(
+        new THREE.SphereGeometry(0.32, 40, 40),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.22, metalness: 0.06 })
+      );
+      nucleus.position.set(0, 0, 0);
+      atomGroup.add(nucleus);
+
+      const orbitRingMat = new THREE.MeshStandardMaterial({
+        color: 0x94a3b8,
+        transparent: true,
+        opacity: 0.18,
+        roughness: 0.6,
+        metalness: 0.0,
+      });
+      const ringGeo = new THREE.TorusGeometry(0.95, 0.012, 8, 120);
+      const ringA = new THREE.Mesh(ringGeo, orbitRingMat);
+      const ringB = new THREE.Mesh(ringGeo, orbitRingMat);
+      const ringC = new THREE.Mesh(ringGeo, orbitRingMat);
+      ringA.position.copy(nucleus.position);
+      ringB.position.copy(nucleus.position);
+      ringC.position.copy(nucleus.position);
+      ringA.rotation.set(Math.PI * 0.24, 0.0, Math.PI * 0.12);
+      ringB.rotation.set(Math.PI * 0.5, 0.0, Math.PI * 0.52);
+      ringC.rotation.set(Math.PI * 0.72, 0.0, Math.PI * 0.85);
+      atomGroup.add(ringA, ringB, ringC);
+
+      const electronGeo = new THREE.SphereGeometry(0.085, 26, 26);
+      const electronMats = [
+        new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.35, metalness: 0.05 }),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 }),
+        new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.35, metalness: 0.05 }),
+      ];
+      const electrons = electronMats.map((mat) => {
+        const m = new THREE.Mesh(electronGeo, mat);
+        atomGroup.add(m);
         return m;
       });
+      const electronPhases = [0.0, 2.1, 4.2];
+      const electronRadius = 0.95;
+      const ringBases = [ringA, ringB, ringC];
 
-      const points = [core.position, ...orbiters.map((m) => m.position)];
-      const lineMat = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.35 });
-      for (let i = 1; i < points.length; i += 1) {
-        const geo = new THREE.BufferGeometry().setFromPoints([points[0], points[i]]);
-        group.add(new THREE.Line(geo, lineMat));
-      }
+      // DNA helix: instanced strand segments + rungs.
+      const dna = new THREE.Group();
+      dna.position.set(0, 0, 0);
+      dnaGroup.add(dna);
+
+      const strandSegGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.2, 10, 1, true);
+      const rungGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.26, 10, 1, true);
+
+      const strandMatA = new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.35, metalness: 0.02 });
+      const strandMatB = new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.35, metalness: 0.02 });
+      const rungMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.42, roughness: 0.75, metalness: 0.0 });
+
+      const STRANDS = 64; // segments per strand
+      const RUNGS = 26;
+      const helixRadius = 0.55;
+      const helixHeight = 2.2;
+      const turns = 2.4;
+
+      const strandA = new THREE.InstancedMesh(strandSegGeo, strandMatA, STRANDS);
+      const strandB = new THREE.InstancedMesh(strandSegGeo, strandMatB, STRANDS);
+      const rungs = new THREE.InstancedMesh(rungGeo, rungMat, RUNGS);
+      strandA.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      strandB.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      rungs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      dna.add(strandA, strandB, rungs);
+
+      const tmpMat = new THREE.Matrix4();
+      const tmpQuat = new THREE.Quaternion();
+      const tmpPos = new THREE.Vector3();
+      const tmpScale = new THREE.Vector3(1, 1, 1);
+      const up = new THREE.Vector3(0, 1, 0);
+
+      const helixPoint = (out, t, phase) => {
+        const angle = t * Math.PI * 2 * turns + phase;
+        const y = (t - 0.5) * helixHeight;
+        out.set(Math.cos(angle) * helixRadius, y, Math.sin(angle) * helixRadius);
+        return out;
+      };
+
+      const p0a = new THREE.Vector3();
+      const p1a = new THREE.Vector3();
+      const p0b = new THREE.Vector3();
+      const p1b = new THREE.Vector3();
+      const dA = new THREE.Vector3();
+      const dB = new THREE.Vector3();
+      const dR = new THREE.Vector3();
+      const dirA = new THREE.Vector3();
+      const dirB = new THREE.Vector3();
+      const dirR = new THREE.Vector3();
+      const midA = new THREE.Vector3();
+      const midB = new THREE.Vector3();
+      const midR = new THREE.Vector3();
+      const electronVec = new THREE.Vector3();
+
+      const updateHelix = (time) => {
+        const wobble = 0.08 * Math.sin(time * 0.0013);
+        dna.rotation.y = time * 0.00035;
+        dna.rotation.x = wobble * 0.35;
+
+        for (let i = 0; i < STRANDS; i += 1) {
+          const t0 = i / STRANDS;
+          const t1 = Math.min(1, (i + 1) / STRANDS);
+          helixPoint(p0a, t0, 0);
+          helixPoint(p1a, t1, 0);
+          helixPoint(p0b, t0, Math.PI);
+          helixPoint(p1b, t1, Math.PI);
+
+          // Strand A segment
+          dA.subVectors(p1a, p0a);
+          midA.addVectors(p0a, p1a).multiplyScalar(0.5);
+          const lenA = dA.length() || 0.000001;
+          dirA.copy(dA).multiplyScalar(1 / lenA);
+          tmpQuat.setFromUnitVectors(up, dirA);
+          tmpPos.copy(midA);
+          tmpScale.set(1, Math.max(0.001, lenA / 0.2), 1);
+          tmpMat.compose(tmpPos, tmpQuat, tmpScale);
+          strandA.setMatrixAt(i, tmpMat);
+
+          // Strand B segment
+          dB.subVectors(p1b, p0b);
+          midB.addVectors(p0b, p1b).multiplyScalar(0.5);
+          const lenB = dB.length() || 0.000001;
+          dirB.copy(dB).multiplyScalar(1 / lenB);
+          tmpQuat.setFromUnitVectors(up, dirB);
+          tmpPos.copy(midB);
+          tmpScale.set(1, Math.max(0.001, lenB / 0.2), 1);
+          tmpMat.compose(tmpPos, tmpQuat, tmpScale);
+          strandB.setMatrixAt(i, tmpMat);
+        }
+
+        for (let i = 0; i < RUNGS; i += 1) {
+          const t = (i + 0.5) / RUNGS;
+          helixPoint(p0a, t, 0);
+          helixPoint(p0b, t, Math.PI);
+          dR.subVectors(p0b, p0a);
+          midR.addVectors(p0a, p0b).multiplyScalar(0.5);
+          const lenR = dR.length() || 0.000001;
+          dirR.copy(dR).multiplyScalar(1 / lenR);
+          tmpQuat.setFromUnitVectors(up, dirR);
+          tmpPos.copy(midR);
+          tmpScale.set(1, Math.max(0.001, lenR / 0.26), 1);
+          tmpMat.compose(tmpPos, tmpQuat, tmpScale);
+          rungs.setMatrixAt(i, tmpMat);
+        }
+
+        strandA.instanceMatrix.needsUpdate = true;
+        strandB.instanceMatrix.needsUpdate = true;
+        rungs.instanceMatrix.needsUpdate = true;
+      };
 
       const animate = () => {
         if (disposed) return;
-        group.rotation.y += 0.008;
-        group.rotation.x = 0.22 + Math.sin(Date.now() * 0.001) * 0.06;
+        const now = Date.now();
+        group.rotation.y = now * 0.00022;
+        group.rotation.x = 0.18 + Math.sin(now * 0.001) * 0.05;
+
+        // Electrons move along each ring's plane.
+        for (let i = 0; i < electrons.length; i += 1) {
+          const phase = electronPhases[i];
+          const angle = now * (0.0011 + i * 0.00022) + phase;
+          electronVec.set(Math.cos(angle) * electronRadius, 0, Math.sin(angle) * electronRadius);
+          electronVec.applyEuler(ringBases[i].rotation).add(nucleus.position);
+          electrons[i].position.copy(electronVec);
+        }
+
+        // DNA updates
+        updateHelix(now);
+
+        // Subtle nucleus pulse
+        nucleus.scale.setScalar(1.0 + Math.sin(now * 0.0022) * 0.02);
+
         renderer.render(scene, camera);
         rafRef.current = requestAnimationFrame(animate);
       };
@@ -293,6 +455,26 @@ function ThreeHero() {
       disposed = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (resizeObserver) resizeObserver.disconnect();
+      if (rootGroup) {
+        try {
+          rootGroup.traverse((obj) => {
+            const mesh = obj;
+            if (mesh.geometry && typeof mesh.geometry.dispose === 'function') {
+              mesh.geometry.dispose();
+            }
+            const mat = mesh.material;
+            if (Array.isArray(mat)) {
+              mat.forEach((m) => {
+                if (m && typeof m.dispose === 'function') m.dispose();
+              });
+            } else if (mat && typeof mat.dispose === 'function') {
+              mat.dispose();
+            }
+          });
+        } catch {
+          // ignore
+        }
+      }
       if (renderer) {
         try {
           renderer.dispose();
@@ -1100,186 +1282,279 @@ function App() {
   }
 
   function VLabWebsite() {
+    const stats = [
+      { label: 'Interactive labs', value: '120+' },
+      { label: 'Reactions catalog', value: '80+' },
+      { label: 'Tools simulated', value: '30+' },
+      { label: 'Students ready', value: 'K-12+' },
+    ];
+    const solutions = [
+      {
+        title: 'Real lab flow',
+        desc: 'Students drag reagents, choose tools, and run experiments with instrument-style feedback.',
+        icon: 'fa-solid fa-route',
+        tone: 'text-cyan-200',
+      },
+      {
+        title: 'Safe by design',
+        desc: 'No fumes, no hazards. Built for classrooms with safety-first outcomes and clear warnings.',
+        icon: 'fa-solid fa-shield-halved',
+        tone: 'text-emerald-200',
+      },
+      {
+        title: 'Notebook built-in',
+        desc: 'Observations and results are saved automatically for review, grading, and reporting.',
+        icon: 'fa-solid fa-book',
+        tone: 'text-purple-200',
+      },
+    ];
+    const audiences = [
+      {
+        title: 'For Students',
+        desc: 'Learn by doing. Clear steps, intuitive controls, and instant feedback.',
+        icon: 'fa-solid fa-graduation-cap',
+      },
+      {
+        title: 'For Teachers',
+        desc: 'Standardized outcomes and auto-saved notes help with assessment.',
+        icon: 'fa-solid fa-chalkboard-user',
+      },
+      {
+        title: 'For Schools',
+        desc: 'Lower cost, less risk, and more labs per semester.',
+        icon: 'fa-solid fa-school',
+      },
+    ];
+    const faqs = [
+      { q: 'Do students need prior lab experience?', a: 'No. The interface guides them step-by-step with clear prompts.' },
+      { q: 'Can this replace physical labs?', a: 'It complements physical labs and increases practice time between sessions.' },
+      { q: 'Is it safe for younger students?', a: 'Yes, outcomes are simulated without real hazards.' },
+      { q: 'Can teachers review results?', a: 'Notebook entries capture each run with observations and results.' },
+    ];
     return html`
-      <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-10 section">
-        <div class="lab-surface rounded-2xl p-5 sm:p-8 overflow-hidden">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-            <div class="min-w-0">
-              <div class="text-xs text-slate-300 tracking-widest uppercase">Virtual Science Lab</div>
-              <h1 class="text-3xl sm:text-5xl font-extrabold mt-2 leading-tight title-grad">
-                Learn Science by <span class="text-cyan-300">doing</span>.
-              </h1>
-              <p class="text-slate-300 mt-4 max-w-xl">
-                Mix chemicals safely, control lab tools, observe results, and save notes — built for students and teachers.
-              </p>
+      <div>
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-10 section">
+          <div class="lab-surface rounded-2xl p-5 sm:p-8 overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+              <div class="min-w-0">
+                <div class="text-xs text-slate-300 tracking-widest uppercase">Virtual Science Lab</div>
+                <h1 class="text-3xl sm:text-5xl font-extrabold mt-2 leading-tight title-grad">
+                  A professional virtual lab for <span class="text-cyan-300">real science learning</span>.
+                </h1>
+                <p class="text-slate-300 mt-4 max-w-xl">
+                  Give students a realistic lab workflow — mix reagents, control instruments, observe results, and capture notes.
+                </p>
 
-              <div class="mt-6 flex gap-3 flex-wrap">
+                <div class="mt-6 flex gap-3 flex-wrap">
+                  <button class="btn btn-solid" onClick=${() => openApp('lab')} type="button">
+                    <i class="fa-solid fa-flask-vial"></i> Get Started
+                  </button>
+                  <button
+                    class="btn"
+                    onClick=${() => {
+                      const el = document.getElementById('problems');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                    type="button"
+                  >
+                    <i class="fa-solid fa-lightbulb"></i> View Problems
+                  </button>
+                </div>
+
+                <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  ${stats.map(
+                    (s) => html`
+                      <div class="panel p-3">
+                        <div class="text-xs text-slate-400">${s.label}</div>
+                        <div class="text-lg font-extrabold text-slate-100">${s.value}</div>
+                      </div>
+                    `
+                  )}
+                </div>
+              </div>
+
+              <div class="panel p-4 sm:p-6 overflow-hidden">
+                <div class="flex items-center justify-between mb-3 min-w-0">
+                  <div class="font-bold text-slate-100 flex items-center gap-2 min-w-0">
+                    <i class="fa-solid fa-cube text-purple-200"></i>
+                    <span class="truncate">3D demo (Three.js)</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 shrink-0">auto-rotating</div>
+                </div>
+                <${ThreeHero} />
+                <div class="text-[11px] text-slate-400 mt-3">The simulator works even if 3D is slow on older devices.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 sm:mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            ${solutions.map(
+              (s) => html`
+                <div class="panel p-4">
+                  <div class="font-bold text-slate-100 flex items-center gap-2">
+                    <i class=${classNames(s.icon, s.tone)}></i> ${s.title}
+                  </div>
+                  <div class="text-sm text-slate-300 mt-2">${s.desc}</div>
+                </div>
+              `
+            )}
+          </div>
+
+          <div id="problems" class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div class="panel p-5 sm:p-6">
+              <div class="text-xs text-slate-300 tracking-widest uppercase">Problems</div>
+              <h2 class="text-2xl sm:text-3xl font-bold mt-2">Real labs are expensive, crowded, and risky.</h2>
+              <p class="text-slate-300 mt-3">
+                Many schools cannot run frequent experiments due to cost, safety requirements, and limited equipment. Students
+                often watch instead of doing, and notes are inconsistent.
+              </p>
+              <ul class="mt-4 space-y-2 text-sm text-slate-300">
+                <li class="flex gap-2"><i class="fa-solid fa-triangle-exclamation text-orange-300"></i> Safety limits reduce hands-on time.</li>
+                <li class="flex gap-2"><i class="fa-solid fa-stopwatch text-cyan-300"></i> Setups consume classroom time.</li>
+                <li class="flex gap-2"><i class="fa-solid fa-screwdriver-wrench text-purple-300"></i> Equipment is scarce or outdated.</li>
+                <li class="flex gap-2"><i class="fa-solid fa-book text-emerald-300"></i> Observations are hard to standardize.</li>
+              </ul>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="panel p-4">
+                <div class="h-32 rounded-xl bg-gradient-to-br from-cyan-500/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+                <div class="text-sm text-slate-300 mt-3">Image: crowded lab bench</div>
+              </div>
+              <div class="panel p-4">
+                <div class="h-32 rounded-xl bg-gradient-to-br from-amber-400/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+                <div class="text-sm text-slate-300 mt-3">Image: safety restrictions</div>
+              </div>
+              <div class="panel p-4 sm:col-span-2">
+                <div class="h-36 rounded-xl bg-gradient-to-br from-purple-500/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+                <div class="text-sm text-slate-300 mt-3">Image: limited equipment</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="solutions" class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 sm:gap-6">
+            <div class="panel p-5 sm:p-6">
+              <div class="text-xs text-slate-300 tracking-widest uppercase">How It Works</div>
+              <h3 class="text-2xl font-bold mt-2">From setup to observation in minutes.</h3>
+              <ol class="mt-4 space-y-2 text-sm text-slate-300">
+                <li class="flex gap-2"><span class="chip">1</span> Choose lab type and reagents.</li>
+                <li class="flex gap-2"><span class="chip">2</span> Select tools and set heat/volume.</li>
+                <li class="flex gap-2"><span class="chip">3</span> Run the experiment and observe changes.</li>
+                <li class="flex gap-2"><span class="chip">4</span> Save findings in the Notebook.</li>
+              </ol>
+            </div>
+            <div class="panel p-5 sm:p-6">
+              <div class="h-44 rounded-xl bg-gradient-to-br from-emerald-500/15 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
+              <div class="text-sm text-slate-300 mt-3">Image: guided workflow view</div>
+              <div class="text-xs text-slate-500 mt-2">Built for classrooms and self-study.</div>
+            </div>
+          </div>
+
+          <div class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+            ${audiences.map(
+              (a) => html`
+                <div class="panel p-5 sm:p-6">
+                  <div class="text-xs text-slate-300 tracking-widest uppercase">Audience</div>
+                  <div class="flex items-center gap-2 mt-2">
+                    <i class=${classNames(a.icon, 'text-cyan-200')}></i>
+                    <h3 class="text-xl font-bold">${a.title}</h3>
+                  </div>
+                  <p class="text-sm text-slate-300 mt-2">${a.desc}</p>
+                </div>
+              `
+            )}
+          </div>
+
+          <div class="mt-8 sm:mt-10 panel p-5 sm:p-6">
+            <div class="text-xs text-slate-300 tracking-widest uppercase">FAQ</div>
+            <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+              ${faqs.map(
+                (f) => html`
+                  <div class="bg-slate-900/60 border border-slate-800 rounded-lg p-4">
+                    <div class="font-semibold text-slate-100">${f.q}</div>
+                    <div class="text-sm text-slate-300 mt-2">${f.a}</div>
+                  </div>
+                `
+              )}
+            </div>
+          </div>
+
+          <div class="mt-8 sm:mt-10 panel p-5 sm:p-6">
+            <div class="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <div class="text-xs text-slate-300 tracking-widest uppercase">Ready to start</div>
+                <div class="text-2xl font-bold mt-2">Give students a real lab experience—without the risk.</div>
+              </div>
+              <button class="btn btn-solid" onClick=${() => openApp('lab')} type="button">
+                <i class="fa-solid fa-flask-vial"></i> Launch Lab App
+              </button>
+            </div>
+          </div>
+        </div>
+        <footer class="footer mt-10">
+          <div class="max-w-7xl mx-auto px-3 sm:px-4 py-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <div class="logo-mark"><i class="fa-solid fa-atom"></i></div>
+                <div class="text-lg font-bold">V-LAB</div>
+              </div>
+              <div class="text-sm text-slate-400">
+                A professional virtual science lab built for students, teachers, and schools.
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400 tracking-widest uppercase mb-2">Product</div>
+              <div class="space-y-2">
+                <button class="footer-link" onClick=${() => openApp('lab')} type="button">Lab App</button>
+                <button class="footer-link" onClick=${() => openApp('periodic')} type="button">Periodic Table</button>
+                <button class="footer-link" onClick=${() => openApp('notebook')} type="button">Notebook</button>
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400 tracking-widest uppercase mb-2">Resources</div>
+              <div class="space-y-2">
+                <button class="footer-link" onClick=${() => openWebsite('vlab')} type="button">Overview</button>
                 <button
-                  class="btn btn-solid"
-                  onClick=${() => openApp('lab')}
-                  type="button"
-                >
-                  <i class="fa-solid fa-flask-vial"></i> Get Started
-                </button>
-                <button
-                  class="btn"
+                  class="footer-link"
                   onClick=${() => {
                     const el = document.getElementById('problems');
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                   }}
                   type="button"
                 >
-                  <i class="fa-solid fa-lightbulb"></i> Problems We Solve
+                  Problems & Solutions
+                </button>
+                <button
+                  class="footer-link"
+                  onClick=${() => {
+                    const el = document.getElementById('solutions');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  type="button"
+                >
+                  How It Works
                 </button>
               </div>
-
-              <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="panel p-4 min-w-0">
-                  <div class="font-bold text-slate-100 flex items-center gap-2">
-                    <i class="fa-solid fa-flask-vial text-cyan-200"></i> Real lab steps
-                  </div>
-                  <div class="text-sm text-slate-300 mt-1">
-                    Drag reagents, use tools, run experiments, and observe.
-                  </div>
-                </div>
-                <div class="panel p-4 min-w-0">
-                  <div class="font-bold text-slate-100 flex items-center gap-2">
-                    <i class="fa-solid fa-book text-emerald-200"></i> Notes included
-                  </div>
-                  <div class="text-sm text-slate-300 mt-1">
-                    Results are saved automatically in the Notebook.
-                  </div>
-                </div>
-              </div>
             </div>
-
-            <div class="panel p-4 sm:p-6 overflow-hidden">
-              <div class="flex items-center justify-between mb-3 min-w-0">
-                <div class="font-bold text-slate-100 flex items-center gap-2 min-w-0">
-                  <i class="fa-solid fa-cube text-purple-200"></i>
-                  <span class="truncate">3D demo (Three.js)</span>
-                </div>
-                <div class="text-[11px] text-slate-400 shrink-0">auto-rotating</div>
-              </div>
-              <${ThreeHero} />
-              <div class="text-[11px] text-slate-400 mt-3">
-                The lab simulator works even if 3D is slow on older devices.
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6 sm:mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-          <div class="panel p-4">
-            <div class="font-bold text-slate-100 flex items-center gap-2">
-              <i class="fa-solid fa-route text-cyan-200"></i> Guided workflow
-            </div>
-            <div class="text-sm text-slate-300 mt-2">
-              Step-by-step lab flow with clear status, so non-technical students feel confident.
-            </div>
-          </div>
-          <div class="panel p-4">
-            <div class="font-bold text-slate-100 flex items-center gap-2">
-              <i class="fa-solid fa-gauge text-purple-200"></i> Instrument-grade controls
-            </div>
-            <div class="text-sm text-slate-300 mt-2">
-              Measure temperature, control heat, and track reaction speed in real time.
-            </div>
-          </div>
-          <div class="panel p-4">
-            <div class="font-bold text-slate-100 flex items-center gap-2">
-              <i class="fa-solid fa-shield-halved text-emerald-200"></i> Safety-first
-            </div>
-            <div class="text-sm text-slate-300 mt-2">
-              Visual warnings and lab-safe outcomes for classroom use.
-            </div>
-          </div>
-        </div>
-
-        <div id="problems" class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <div class="panel p-5 sm:p-6">
-            <div class="text-xs text-slate-300 tracking-widest uppercase">Problems</div>
-            <h2 class="text-2xl sm:text-3xl font-bold mt-2">Real labs are expensive, crowded, and risky.</h2>
-            <p class="text-slate-300 mt-3">
-              Many schools cannot run frequent experiments due to cost, safety requirements, and limited equipment. Students
-              often watch instead of doing, and notes are inconsistent.
-            </p>
-            <ul class="mt-4 space-y-2 text-sm text-slate-300">
-              <li class="flex gap-2"><i class="fa-solid fa-triangle-exclamation text-orange-300"></i> Safety limits reduce hands‑on time.</li>
-              <li class="flex gap-2"><i class="fa-solid fa-stopwatch text-cyan-300"></i> Setups consume classroom time.</li>
-              <li class="flex gap-2"><i class="fa-solid fa-screwdriver-wrench text-purple-300"></i> Equipment is scarce or outdated.</li>
-              <li class="flex gap-2"><i class="fa-solid fa-book text-emerald-300"></i> Observations are hard to standardize.</li>
-            </ul>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div class="panel p-4">
-              <div class="h-32 rounded-xl bg-gradient-to-br from-cyan-500/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
-              <div class="text-sm text-slate-300 mt-3">Image: crowded lab bench</div>
-            </div>
-            <div class="panel p-4">
-              <div class="h-32 rounded-xl bg-gradient-to-br from-amber-400/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
-              <div class="text-sm text-slate-300 mt-3">Image: safety restrictions</div>
-            </div>
-            <div class="panel p-4 sm:col-span-2">
-              <div class="h-36 rounded-xl bg-gradient-to-br from-purple-500/20 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
-              <div class="text-sm text-slate-300 mt-3">Image: limited equipment</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="solutions" class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-          <div class="panel p-5 sm:p-6">
-            <div class="text-xs text-slate-300 tracking-widest uppercase">Solutions</div>
-            <h3 class="text-xl font-bold mt-2">Interactive lab simulator</h3>
-            <p class="text-sm text-slate-300 mt-2">
-              Students drag reagents, adjust heat/volume, and run experiments with clear, instrument-style feedback.
-            </p>
-          </div>
-          <div class="panel p-5 sm:p-6">
-            <div class="text-xs text-slate-300 tracking-widest uppercase">Solutions</div>
-            <h3 class="text-xl font-bold mt-2">Guided workflow</h3>
-            <p class="text-sm text-slate-300 mt-2">
-              Step-by-step guidance reduces confusion and helps non‑technical users complete labs confidently.
-            </p>
-          </div>
-          <div class="panel p-5 sm:p-6">
-            <div class="text-xs text-slate-300 tracking-widest uppercase">Solutions</div>
-            <h3 class="text-xl font-bold mt-2">Auto‑saved Notebook</h3>
-            <p class="text-sm text-slate-300 mt-2">
-              Observations and results are captured automatically for review and assessment.
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-8 sm:mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 sm:gap-6">
-          <div class="panel p-5 sm:p-6">
-            <div class="text-xs text-slate-300 tracking-widest uppercase">How It Works</div>
-            <h3 class="text-2xl font-bold mt-2">From setup to observation in minutes.</h3>
-            <ol class="mt-4 space-y-2 text-sm text-slate-300">
-              <li class="flex gap-2"><span class="chip">1</span> Choose lab type and reagents.</li>
-              <li class="flex gap-2"><span class="chip">2</span> Select tools and set heat/volume.</li>
-              <li class="flex gap-2"><span class="chip">3</span> Run the experiment and observe changes.</li>
-              <li class="flex gap-2"><span class="chip">4</span> Save findings in the Notebook.</li>
-            </ol>
-          </div>
-          <div class="panel p-5 sm:p-6">
-            <div class="h-44 rounded-xl bg-gradient-to-br from-emerald-500/15 via-slate-950/40 to-slate-900/80 border border-slate-800"></div>
-            <div class="text-sm text-slate-300 mt-3">Image: guided workflow view</div>
-            <div class="text-xs text-slate-500 mt-2">Built for classrooms and self‑study.</div>
-          </div>
-        </div>
-
-        <div class="mt-8 sm:mt-10 panel p-5 sm:p-6">
-          <div class="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <div class="text-xs text-slate-300 tracking-widest uppercase">Ready to start</div>
-              <div class="text-2xl font-bold mt-2">Give students a real lab experience—without the risk.</div>
+              <div class="text-xs text-slate-400 tracking-widest uppercase mb-2">Contact</div>
+              <div class="text-sm text-slate-400">
+                Email: support@vlab.edu
+                <br />
+                Phone: +1 (555) 010-2026
+              </div>
             </div>
-            <button class="btn btn-solid" onClick=${() => openApp('lab')} type="button">
-              <i class="fa-solid fa-flask-vial"></i> Launch Lab App
-            </button>
           </div>
-        </div>
+          <div class="border-t border-slate-800/70">
+            <div class="max-w-7xl mx-auto px-3 sm:px-4 py-4 text-xs text-slate-500 flex items-center justify-between gap-3 flex-wrap">
+              <div>© 2026 V-LAB. All rights reserved.</div>
+              <div class="flex gap-3">
+                <span>Privacy</span>
+                <span>Terms</span>
+                <span>Accessibility</span>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
     `;
   }

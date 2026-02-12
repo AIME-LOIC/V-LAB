@@ -1,5 +1,85 @@
 [
   {
+    "id": "finding_1770882959305_240a046750e658",
+    "title": "Chemistry Lab: Calcium Carbide (CaC₂)",
+    "content": "Mixture: Calcium Carbide (CaC₂), Carbon Dioxide (CO₂), Hydrogen Gas (H₂)",
+    "experiment": "Calcium Carbide (CaC₂), Carbon Dioxide (CO₂), Hydrogen Gas (H₂)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-12T09:55:59.312732",
+    "observations": "General chemical interaction: 3 reagents show observable change.",
+    "conclusion": "Reaction pathway not in database; interaction modeled."
+  },
+  {
+    "id": "finding_1770814020607_8c3102d5f68998",
+    "title": "Biology Lab: Yeast",
+    "content": "Mixture: Yeast · Tools: Microscope, Thermometer, Bunsen Burner",
+    "experiment": "Yeast",
+    "lab": "Biology",
+    "timestamp": "2026-02-11T14:47:00.615670",
+    "observations": "Biological interaction: 1 samples show gradual change.",
+    "conclusion": "Enzymatic/biochemical activity detected."
+  },
+  {
+    "id": "finding_1770813994393_a5efd8b5ea7c28",
+    "title": "Biology Lab: Yeast",
+    "content": "Mixture: Yeast · Tools: Microscope",
+    "experiment": "Yeast",
+    "lab": "Biology",
+    "timestamp": "2026-02-11T14:46:34.401542",
+    "observations": "Biological interaction: 1 samples show gradual change.",
+    "conclusion": "Enzymatic/biochemical activity detected."
+  },
+  {
+    "id": "finding_1770813898109_13d50d409fb0f",
+    "title": "Chemistry Lab: Oil",
+    "content": "Mixture: Oil, Water (H₂O) · Tools: Bunsen Burner",
+    "experiment": "Oil, Water (H₂O)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T14:44:58.114542",
+    "observations": "Immiscible mixture: liquids separate into layers based on density.",
+    "conclusion": "No chemical reaction; physical separation observed."
+  },
+  {
+    "id": "finding_1770813873611_c1f5acc7e05e58",
+    "title": "Chemistry Lab: Oil",
+    "content": "Mixture: Oil, Water (H₂O)",
+    "experiment": "Oil, Water (H₂O)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T14:44:33.618847",
+    "observations": "Immiscible mixture: liquids separate into layers based on density.",
+    "conclusion": "No chemical reaction; physical separation observed."
+  },
+  {
+    "id": "finding_1770813868199_987095fb49bbb8",
+    "title": "Chemistry Lab: Oil",
+    "content": "Mixture: Oil, Water (H₂O)",
+    "experiment": "Oil, Water (H₂O)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T14:44:28.205123",
+    "observations": "Immiscible mixture: liquids separate into layers based on density.",
+    "conclusion": "No chemical reaction; physical separation observed."
+  },
+  {
+    "id": "finding_1770813862623_82e653c2372f58",
+    "title": "Chemistry Lab: Oil",
+    "content": "Mixture: Oil, Water (H₂O)",
+    "experiment": "Oil, Water (H₂O)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T14:44:22.633027",
+    "observations": "Immiscible mixture: liquids separate into layers based on density.",
+    "conclusion": "No chemical reaction; physical separation observed."
+  },
+  {
+    "id": "finding_1770810943687_e5d7970373441",
+    "title": "Chemistry Lab: Oxygen (O₂)",
+    "content": "Mixture: Oxygen (O₂), Methane (CH₄)",
+    "experiment": "Oxygen (O₂), Methane (CH₄)",
+    "lab": "Chemistry",
+    "timestamp": "2026-02-11T13:55:43.704750",
+    "observations": "blue to yellow flame observed. Methane burns in oxygen to produce carbon dioxide and water",
+    "conclusion": "Combustion of Methane: CH₄ + 2O₂ → CO₂ + 2H₂O"
+  },
+  {
     "id": "finding_1770805906619_b91a06200a48a8",
     "title": "Chemistry Lab: Oxygen (O₂)",
     "content": "Mixture: Oxygen (O₂), Methane (CH₄)",
